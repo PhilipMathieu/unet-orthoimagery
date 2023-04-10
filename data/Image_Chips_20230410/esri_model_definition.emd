@@ -1,0 +1,110 @@
+{
+  "Framework" : "e.g. TensorFlow or PyTorch",
+  "ModelConfiguration" : "e.g. UNet or FasterRCNN",
+  "ModelType" : "e.g. ObjectDetection or ImageClassification",
+  "ModelFile" : "e.g. ./trained.model",
+  "Description" : "e.g. which data model was trained on, when, by whom, mAP, etc",
+  "ImageHeight" : 64,
+  "ImageWidth" : 64,
+  "ExtractBands" : "e.g. [0, 1, 2]",
+  "DataRange" : "e.g. [0.1, 1.0] (optional)",
+  "ModelPadding" : "e.g. 64 (optional)",
+  "BatchSize" : "e.g. 8 (optional)",
+  "PerProcessGPUMemoryFraction" : "e.g. 0.8 (optional)",
+  "MetaDataMode" : "Classified_Tiles",
+  "BlackenAroundFeature" : false,
+  "IsMultidimensional" : false,
+  "CropTileMode" : "Fixed_Size",
+  "ImageSpaceUsed" : "MAP_SPACE",
+  "MinCellSize" : {
+    "x" : 0.074999999999999997,
+    "y" : 0.074999999999999997,
+    "spatialReference" : {
+      "wkid" : 102388,
+      "latestWkid" : 6348
+    }
+  },
+  "MaxCellSize" : {
+    "x" : 0.074999999999999997,
+    "y" : 0.074999999999999997,
+    "spatialReference" : {
+      "wkid" : 102388,
+      "latestWkid" : 6348
+    }
+  },
+  "Classes" : [
+    {
+      "Value" : 255,
+      "Name" : "255",
+      "Color" : [
+        156,
+        75,
+        184
+      ]
+    }
+  ],
+  "InputRastersProps" : {
+    "RasterCount" : 1,
+    "SensorName" : "MultiSpectral",
+    "BandNames" : [
+      "",
+      "",
+      "",
+      ""
+    ]
+  },
+  "AllTilesStats" : [
+    {
+      "BandName" : "",
+      "Min" : 0,
+      "Max" : 251,
+      "Mean" : 100.89464839958787,
+      "StdDev" : 35.414104091298285
+    },
+    {
+      "BandName" : "",
+      "Min" : 0,
+      "Max" : 247,
+      "Mean" : 95.648147455542528,
+      "StdDev" : 34.700056103805572
+    },
+    {
+      "BandName" : "",
+      "Min" : 0,
+      "Max" : 244,
+      "Mean" : 74.653492009413071,
+      "StdDev" : 31.952306587378956
+    },
+    {
+      "BandName" : "",
+      "Min" : 0,
+      "Max" : 249,
+      "Mean" : 139.16598396670534,
+      "StdDev" : 36.87364519402211
+    }
+  ],
+  "WellKnownBandNames (FYI, these band names can be used in ExtractBands)" : [
+    "Red",
+    "Green",
+    "Blue",
+    "Infrared",
+    "CoastalBlue",
+    "Yellow",
+    "RedEdge",
+    "ShortWaveInfrared",
+    "NearInfrared",
+    "NearInfrared_1",
+    "NearInfrared_2",
+    "MidInfrared",
+    "MidInfrared_1",
+    "MidInfrared_2",
+    "Thermal",
+    "Thermal_1",
+    "Thermal_2",
+    "Panchromatic",
+    "PseudoRed",
+    "PseudoGreen",
+    "PseudoBlue",
+    "QA"
+  ]
+}
