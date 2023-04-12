@@ -17,11 +17,11 @@ class DoubleConv(nn.Module):
         if not mid_channels:
             mid_channels = out_channels
         self.double_conv = nn.Sequential(
-            nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding='valid'), # padding = 'valid'acoording to [1]
-            # nn.BatchNorm2d(mid_channels), excluded according to [1]
+            nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding='valid'), # padding = 'valid' acoording to [1]
+            nn.BatchNorm2d(mid_channels), # not mentioned in [1]
             nn.ReLU(inplace=True), # Not sure what inplace does, even after reading documentation
-            nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding='valid'), # padding = 'valid'acoording to [1]
-            # nn.BatchNorm2d(mid_channels), excluded according to [1]
+            nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding='valid'), # padding = 'valid' acoording to [1]
+            nn.BatchNorm2d(mid_channels), # not mentioned in [1]
             nn.ReLU(inplace=True) # Not sure what inplace does, even after reading documentation
         )
     
@@ -72,7 +72,7 @@ class Up(nn.Moduel):
 class OutConv(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(OutConv, self).__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size = 1)
+        self.conv = nn.Conv2d(in_channels,out_channels, kernel_size = 1)
     
     def forward(self, x):
         return self.conv(x)

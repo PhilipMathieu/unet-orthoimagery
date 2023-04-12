@@ -4,6 +4,8 @@
 # References
 #   [1] "U-Net: Convolutional Networks for Biomedical Image Segmentation"
 
+# n_classes = 1 or 2
+
 from .unet_parts import *
 
 class UNet(nn.Module):
