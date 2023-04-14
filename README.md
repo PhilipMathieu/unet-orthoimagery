@@ -11,3 +11,4 @@
 ## References
 - [milesial/Pytorch-UNet, Github](https://github.com/milesial/Pytorch-UNet)
 - [Sorensen-Dice coefficient, Wikipedia](https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient)
+- [RMSProp, Cornell Wiki](https://optimization.cbe.cornell.edu/index.php?title=RMSProp#:~:text=RMSProp%2C%20root%20mean%20square%20propagation,lecture%20six%20by%20Geoff%20Hinton.)
