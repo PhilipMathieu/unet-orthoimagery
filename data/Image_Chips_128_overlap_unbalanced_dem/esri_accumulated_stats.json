@@ -1,0 +1,132 @@
+{
+  "Version" : 1,
+  "NumBands" : 4,
+  "TileSizeX" : 128,
+  "TileSizeY" : 128,
+  "NumClasses" : 1,
+  "NumTiles" : 21526,
+  "NumTilesAsDouble" : 21526,
+  "NextTileIndex" : 24727,
+  "OutputFeatures" : true,
+  "MetaDataMode" : "Classified_Tiles",
+  "MinCellSize" : {
+    "x" : 0.074999999999999997,
+    "y" : 0.074999999999999997,
+    "spatialReference" : {
+      "wkid" : 102388,
+      "latestWkid" : 6348
+    }
+  },
+  "MaxCellSize" : {
+    "x" : 0.074999999999999997,
+    "y" : 0.074999999999999997,
+    "spatialReference" : {
+      "wkid" : 102388,
+      "latestWkid" : 6348
+    }
+  },
+  "Classes" : [
+    {
+      "ClassValue" : 255,
+      "ClassName" : "255",
+      "Color" : [
+        231,
+        211,
+        150
+      ]
+    }
+  ],
+  "FeatureStats" : {
+    "NumClasses" : 1,
+    "NumImagesTotal" : 23059,
+    "NumFeaturesTotal" : 731,
+    "NumImagesPerClass" : [
+      654
+    ],
+    "NumFeaturesPerClass" : [
+      731
+    ],
+    "NumFeaturesPerImage" : {
+      "Min" : 1,
+      "Max" : 3,
+      "Mean" : 1.117737003058104,
+      "Sum" : 731,
+      "Count" : 654
+    },
+    "FeatureAreaPerClass" : [
+      {
+        "Min" : 0.00042028001156568535,
+        "Max" : 92.160000019669539,
+        "Mean" : 32.999816669177754,
+        "Sum" : 24122.865985168941,
+        "Count" : 731
+      }
+    ]
+  },
+  "InputRastersProps" : {
+    "RasterCount" : 1,
+    "SensorName" : "MultiSpectral",
+    "BandNames" : [
+      "",
+      "",
+      "",
+      ""
+    ]
+  },
+  "InputRastersProps2" : {
+    "RasterCount" : 1,
+    "SensorName" : "Undefined",
+    "BandNames" : [
+      ""
+    ]
+  },
+  "BandStatsState" : [
+    {
+      "Min" : 0,
+      "Max" : 251,
+      "Mean" : 0,
+      "StdDev" : 0,
+      "M1" : 100.97193962542579,
+      "M2" : 434996178474.21234,
+      "Num" : 348413952
+    },
+    {
+      "Min" : 0,
+      "Max" : 247,
+      "Mean" : 0,
+      "StdDev" : 0,
+      "M1" : 95.690244390672376,
+      "M2" : 417597666380.8576,
+      "Num" : 348413952
+    },
+    {
+      "Min" : 0,
+      "Max" : 244,
+      "Mean" : 0,
+      "StdDev" : 0,
+      "M1" : 74.686442436151367,
+      "M2" : 353712207336.56927,
+      "Num" : 348413952
+    },
+    {
+      "Min" : 0,
+      "Max" : 249,
+      "Mean" : 0,
+      "StdDev" : 0,
+      "M1" : 139.27342418537819,
+      "M2" : 469928745600.39142,
+      "Num" : 348413952
+    }
+  ],
+  "BandStatsState2" : [
+    {
+      "Min" : 2377,
+      "Max" : 30461,
+      "Mean" : 0,
+      "StdDev" : 0,
+      "M1" : 11947.345805449482,
+      "M2" : 6865675039910334,
+      "Num" : 352681984
+    }
+  ]
+}
