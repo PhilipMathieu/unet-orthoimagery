@@ -39,14 +39,16 @@ def unique_mask_values(idx, mask_dir, mask_suffix):
         raise ValueError(f'Loaded masks should have 2 or 3 dimensions, found {mask.ndim}')
     
 class BasicDataset(Dataset):
-    def __init__(self, images_dir: str, mask_dir: str, scale: float = 1.0, mask_suffix: str= ''):
+    def __init__(self, images_dir: str, dem_dir: str, mask_dir: str, scale: float = 1.0, mask_suffix: str= ''):
         self.images_dir = Path(images_dir)
+        self.dem_dir = Path(dem_dir)
         self.mask_dir = Path(mask_dir)
         assert 0 < scale <= 1, 'Scale must be between 0 and 1'
         self.scale = scale
         self.mask_suffix = mask_suffix
 
         self.ids = [splitext(file)[0]  for file in listdir(images_dir) if isfile(join(images_dir, file)) and not file.startswith('.') and file.endswith('.tif')]
+        self.dids = [splitext(file)[0]  for file in listdir(dem_dir) if isfile(join(dem_dir, file)) and not file.startswith('.') and file.endswith('.tif')]
         self.mids = [splitext(file)[0]  for file in listdir(mask_dir) if isfile(join(mask_dir, file)) and not file.startswith('.') and file.endswith('.tif')]
         if not self.ids:
             raise RuntimeError(f'No input file found in {images_dir}, make sure you put your images there')
@@ -66,11 +68,11 @@ class BasicDataset(Dataset):
         return len(self.ids)
     
     @staticmethod
-    def preprocess(mask_values, pil_img, scale, is_mask):
+    def preprocess(mask_values, pil_img, scale, is_mask, is_dem):
         w, h = pil_img.size
         newW, newH = int(scale * w), int(scale * h)
         assert newW > 0 and newH > 0, 'Scale is too small, resized images would have no pixel'
-        pil_img = pil_img.resize((newW, newH), resample=Image.NEAREST if is_mask else Image.BICUBIC)
+        pil_img = pil_img.resize((newW, newH), resample=Image.NEAREST if (is_mask or is_dem) else Image.BICUBIC)
         img = np.asarray(pil_img)
 
         if is_mask:
@@ -87,29 +89,47 @@ class BasicDataset(Dataset):
                 img = img[np.newaxis, ...]
             else:
                 img = img.transpose((2,0,1))
-
-            if (img > 1).any():
-                img = img / 255.0
+        
+            if is_dem:
+                img = (img - np.min(img))
+                img = img / (np.max(img) / 255)
+            else:
+                if (img > 1).any():
+                    img = img / 255.0
             
             return img
     
+    @staticmethod
+    def composite_bands(img, dem):
+        return np.concatenate([img[0:3, :, :], dem], axis=0)
+    
+    
     def __getitem__(self, idx):
         img_name = self.ids[idx]
+        dem_name = self.dids[idx]
         mask_name = self.mids[idx]
         img_file = list(self.images_dir.glob(img_name + '.tif'))
+        dem_file = list(self.dem_dir.glob(dem_name + '.tif'))
         mask_file = list(self.mask_dir.glob(mask_name + self.mask_suffix + '.tif'))
         
 
         assert len(img_file) == 1, f'Either no image or multiple images found for the ID {img_name}: {img_file}'
+        assert len(dem_file) == 1, f'Either no DEM or multiple DEM found for the ID {dem_name}: {dem_file}'
         assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {mask_name}: {mask_file}'
         mask = load_image(mask_file[0])
+        dem = load_image(dem_file[0])
         img = load_image(img_file[0])
 
         assert img.size == mask.size, \
-            f'Image {img_name} and mask {mask_name} should be the szme size, but are {img.size} and {mask.size}'
+            f'Image {img_name} and mask {mask_name} should be the same size, but are {img.size} and {mask.size}'
+        assert dem.size == mask.size, \
+            f'DEM {dem_name} and mask {mask_name} should be the same size, but are {dem.size} and {mask.size}'
         
-        img = self.preprocess(self.mask_values, img, self.scale, is_mask=False)
-        mask = self.preprocess(self.mask_values, mask, self.scale, is_mask=True)
+        img = self.preprocess(self.mask_values, img, self.scale, is_mask=False, is_dem=False)
+        dem = self.preprocess(self.mask_values, dem, self.scale, is_mask=False, is_dem=True)
+        mask = self.preprocess(self.mask_values, mask, self.scale, is_mask=True, is_dem=False)
+        
+        img = self.composite_bands(img, dem)
 
         return {
             'image': torch.as_tensor(img.copy()).float().contiguous(),
@@ -117,5 +137,5 @@ class BasicDataset(Dataset):
         }
 
 class MEOIDataset(BasicDataset):
-    def __init__(self, images_dir, mask_dir, scale=1):
-        super().__init__(images_dir, mask_dir, scale, mask_suffix='_mask')
+    def __init__(self, images_dir, dem_dir, mask_dir, scale=1):
+        super().__init__(images_dir, dem_dir, mask_dir, scale, mask_suffix='_mask')

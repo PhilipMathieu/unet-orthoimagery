@@ -28,8 +28,9 @@ from unet.unet_model import UNet
 from utils.dice_score import dice_loss
 from utils.data_loading import MEOIDataset, BasicDataset
 
-dir_img = Path("./data/mixed/images/")
-dir_mask = Path("./data/mixed/labels/")
+dir_img = Path("../data/Image_Chips_128_nostride_balanced_dem/images/")
+dir_dem = Path("../data/Image_Chips_128_nostride_balanced_dem/images2/")
+dir_mask = Path("../data/Image_Chips_128_nostride_balanced_dem/labels/")
 dir_checkpoint = Path('./checkpoints/')
 
 def train_model(
@@ -48,9 +49,9 @@ def train_model(
 ):
     # 1. Create Dataset
     try:
-        dataset = MEOIDataset(dir_img, dir_mask, img_scale)
+        dataset = MEOIDataset(dir_img, dir_dem, dir_mask, img_scale)
     except (AssertionError, RuntimeError, IndexError):
-        dataset = BasicDataset(dir_img, dir_mask, img_scale)
+        dataset = BasicDataset(dir_img, dir_dem, dir_mask, img_scale)
 
     # 2. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)
