@@ -1,79 +1,121 @@
-import os
+# https://github.com/milesial/Pytorch-UNet/blob/master/utils/data_loading.py
+# modified by: James Kim
+# date: Apr 14, 2023
+
+import logging
 import numpy as np
 import torch
-import torch.utils.data
-import cv2 as cv
+from PIL import Image
+from functools import lru_cache
+from functools import partial
+from itertools import repeat
+from multiprocessing import Pool
+from os import listdir
+from os.path import splitext, isfile, join
+from pathlib import Path
+from torch.utils.data import Dataset
+from tqdm import tqdm
 
+def load_image(filename):
+    ext = splitext(filename)[1]
+    if ext == '.tif':
+        return Image.open(filename)
+    elif ext == '.tfw':
+        return
+    elif ext in ['.pt', '.pth']:
+        return Image.fromarray(torch.load(filename).numpy())
+    else:
+        return Image.open(filename)
+    
+def unique_mask_values(idx, mask_dir, mask_suffix):
+    mask_file = list(mask_dir.glob(idx + mask_suffix + '.tif'))[0]
+    mask = np.asarray(load_image(mask_file))
+    if mask.ndim == 2:
+        return np.unique(mask)
+    elif mask.ndim == 3:
+        mask = mask.reshape(-1, mask.shape[-1])
+        return np.unique(mask, axis=0)
+    else:
+        raise ValueError(f'Loaded masks should have 2 or 3 dimensions, found {mask.ndim}')
+    
+class BasicDataset(Dataset):
+    def __init__(self, images_dir: str, mask_dir: str, scale: float = 1.0, mask_suffix: str= ''):
+        self.images_dir = Path(images_dir)
+        self.mask_dir = Path(mask_dir)
+        assert 0 < scale <= 1, 'Scale must be between 0 and 1'
+        self.scale = scale
+        self.mask_suffix = mask_suffix
 
-class MEOIdataset(torch.utils.data.Dataset):
-    def __init__(self, root, transforms=None):
-        self.root = root
-        self.transforms = transforms
-        # load all image files, sorting them to
-        # ensure that they are aligned
-        self.imgs = list(sorted(os.listdir(os.path.join(root, "images"))))
-        self.masks = list(sorted(os.listdir(os.path.join(root, "labels"))))
-
-    def __getitem__(self, idx):
-        # load images ad masks
-        img_path = os.path.join(self.root, "imges", self.imgs[idx])
-        mask_path = os.path.join(self.root, "labels", self.masks[idx])
-        img = cv.imread(img_path, cv.IMREAD_UNCHANGED)
-
-        # note that we haven't converted the mask to RGB,
-        # because each color corresponds to a different instance
-        # with 0 being background
-        mask = cv.imread(mask_path, cv.IMREAD_UNCHANGED)
-        mask = cv.convertScaleAbs(mask)
-
-        mask = np.array(mask)
-
-        ''''''''''''''''''''''''
-        '''NEED TO WORK BELOW'''
-        ''''''''''''''''''''''''
-
-        # instances are encoded as different colors
-        obj_ids = np.unique(mask)
-        # first id is the background, so remove it
-        obj_ids = obj_ids[1:]
-
-        # split the color-encoded mask into a set
-        # of binary masks
-        masks = mask == obj_ids[:, None, None]
-
-        # get bounding box coordinates for each mask
-        num_objs = len(obj_ids)
-        boxes = []
-        for i in range(num_objs):
-            pos = np.where(masks[i])
-            xmin = np.min(pos[1])
-            xmax = np.max(pos[1])
-            ymin = np.min(pos[0])
-            ymax = np.max(pos[0])
-            boxes.append([xmin, ymin, xmax, ymax])
-
-        boxes = torch.as_tensor(boxes, dtype=torch.float32)
-        # there is only one class
-        labels = torch.ones((num_objs,), dtype=torch.int64)
-        masks = torch.as_tensor(masks, dtype=torch.uint8)
-
-        image_id = torch.tensor([idx])
-        area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
-        # suppose all instances are not crowd
-        iscrowd = torch.zeros((num_objs,), dtype=torch.int64)
-
-        target = {}
-        target["boxes"] = boxes
-        target["labels"] = labels
-        target["masks"] = masks
-        target["image_id"] = image_id
-        target["area"] = area
-        target["iscrowd"] = iscrowd
-
-        if self.transforms is not None:
-            img, target = self.transforms(img, target)
-
-        return img, target
+        self.ids = [splitext(file)[0]  for file in listdir(images_dir) if isfile(join(images_dir, file)) and not file.startswith('.') and file.endswith('.tif')]
+        self.mids = [splitext(file)[0]  for file in listdir(mask_dir) if isfile(join(mask_dir, file)) and not file.startswith('.') and file.endswith('.tif')]
+        if not self.ids:
+            raise RuntimeError(f'No input file found in {images_dir}, make sure you put your images there')
+        
+        logging.info(f'Creating dataset with {len(self.ids)} examples')
+        logging.info('Scanning mask files to determine unique values')
+        with Pool() as p:
+            unique = list(tqdm(
+                p.imap(partial(unique_mask_values, mask_dir = self.mask_dir, mask_suffix=self.mask_suffix), self.mids),
+                total = len(self.ids)
+            ))
+        
+        self.mask_values = list(sorted(np.unique(np.concatenate(unique), axis=0).tolist()))
+        logging.info(f'Unique mask values: {self.mask_values}')
 
     def __len__(self):
-        return len(self.imgs)
+        return len(self.ids)
+    
+    @staticmethod
+    def preprocess(mask_values, pil_img, scale, is_mask):
+        w, h = pil_img.size
+        newW, newH = int(scale * w), int(scale * h)
+        assert newW > 0 and newH > 0, 'Scale is too small, resized images would have no pixel'
+        pil_img = pil_img.resize((newW, newH), resample=Image.NEAREST if is_mask else Image.BICUBIC)
+        img = np.asarray(pil_img)
+
+        if is_mask:
+            mask = np.zeros((newH, newW), dtype=np.int64)
+            for i, v in enumerate(mask_values):
+                if img.ndim == 2:
+                    mask[img == v] = i
+                else:
+                    mask[(img == v).all(-1)] = i
+
+            return mask
+        else:
+            if img.ndim == 2:
+                img = img[np.newaxis, ...]
+            else:
+                img = img.transpose((2,0,1))
+
+            if (img > 1).any():
+                img = img / 255.0
+            
+            return img
+    
+    def __getitem__(self, idx):
+        img_name = self.ids[idx]
+        mask_name = self.mids[idx]
+        img_file = list(self.images_dir.glob(img_name + '.tif'))
+        mask_file = list(self.mask_dir.glob(mask_name + self.mask_suffix + '.tif'))
+        
+
+        assert len(img_file) == 1, f'Either no image or multiple images found for the ID {img_name}: {img_file}'
+        assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {mask_name}: {mask_file}'
+        mask = load_image(mask_file[0])
+        img = load_image(img_file[0])
+
+        assert img.size == mask.size, \
+            f'Image {img_name} and mask {mask_name} should be the szme size, but are {img.size} and {mask.size}'
+        
+        img = self.preprocess(self.mask_values, img, self.scale, is_mask=False)
+        mask = self.preprocess(self.mask_values, mask, self.scale, is_mask=True)
+
+        return {
+            'image': torch.as_tensor(img.copy()).float().contiguous(),
+            'mask': torch.as_tensor(mask.copy()).long().contiguous()
+        }
+
+class MEOIDataset(BasicDataset):
+    def __init__(self, images_dir, mask_dir, scale=1):
+        super().__init__(images_dir, mask_dir, scale, mask_suffix='_mask')

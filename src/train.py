@@ -23,13 +23,13 @@ from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 import wandb
 
-from .evaluate import evaluate
-from .unet.unet_model import UNet
-from .utils.dice_score import dice_loss
-from .utils.data_loading import MEOIdataset
+from evaluate import evaluate
+from unet.unet_model import UNet
+from utils.dice_score import dice_loss
+from utils.data_loading import MEOIDataset, BasicDataset
 
-dir_img = Path("./data/_Image_Chips_20230410/images/")
-dir_mask = Path("./data/_Image_Chips_20230410/labels/")
+dir_img = Path("./data/mixed/images/")
+dir_mask = Path("./data/mixed/labels/")
 dir_checkpoint = Path('./checkpoints/')
 
 def train_model(
@@ -47,7 +47,10 @@ def train_model(
         gradient_clipping:float=1.0 # not mentioned in [2], need to check [1]
 ):
     # 1. Create Dataset
-    dataset = MEOIdataset(dir_img) # placeholder
+    try:
+        dataset = MEOIDataset(dir_img, dir_mask, img_scale)
+    except (AssertionError, RuntimeError, IndexError):
+        dataset = BasicDataset(dir_img, dir_mask, img_scale)
 
     # 2. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)
@@ -81,8 +84,8 @@ def train_model(
     # 4. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
     optimizer = optim.RMSprop(model.parameters(),
                                 lr=learning_rate, weight_decay=weight_decay, momentum=momentum, foreach=True)
-    scheduler = optim.lr_scheduler.ReduceROnPlateau(optimizer, 'max', patience=5) # goal: maximize Dice score # not mentioned in [2], need to check [1]
-    grad_scaler = torch.cuda.ampGradScaler(enabled=amp) # Need to check
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5) # goal: maximize Dice score # not mentioned in [2], need to check [1]
+    grad_scaler = torch.cuda.amp.GradScaler(enabled=amp) # Need to check
     criterion = nn.CrossEntropyLoss() if model.n_classes > 1 else nn.BCEWithLogitsLoss()
     global_step = 0
 
@@ -178,7 +181,7 @@ def get_args():
     parser.add_argument('--validation', '-v', dest='val', type=float, default=33.3, help='Percent of the data that is used as validation (0-100)')
     parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
-    parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
+    parser.add_argument('--classes', '-c', type=int, default=1, help='Number of classes')
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -186,7 +189,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    logging.info(f'Using device{device}')
+    logging.info(f'Using device: {device}')
 
     # Change here to adapt to your data
     # n_channels=3 for RGB images

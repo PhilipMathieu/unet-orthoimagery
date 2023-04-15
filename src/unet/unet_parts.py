@@ -17,11 +17,11 @@ class DoubleConv(nn.Module):
         if not mid_channels:
             mid_channels = out_channels
         self.double_conv = nn.Sequential(
-            nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding='valid'), # padding = 'valid' acoording to [1]
+            nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(mid_channels), # not mentioned in [1]
             nn.ReLU(inplace=True), # Not sure what inplace does, even after reading documentation
-            nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding='valid'), # padding = 'valid' acoording to [1]
-            nn.BatchNorm2d(mid_channels), # not mentioned in [1]
+            nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm2d(out_channels), # not mentioned in [1]
             nn.ReLU(inplace=True) # Not sure what inplace does, even after reading documentation
         )
     
@@ -41,7 +41,7 @@ class Down(nn.Module):
     def forward(self, x):
         return self.maxpool_conv(x)
 
-class Up(nn.Moduel):
+class Up(nn.Module):
     """Upscaling then double conv"""
 
     def __init__(self, in_channels, out_channels, bilinear=True):
