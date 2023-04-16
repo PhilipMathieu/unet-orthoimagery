@@ -1,4 +1,4 @@
-# Hao Sheng (Jack) Ning Final Project
+# Final Project
 # Used for Data Augmentation
 # CS 5330 Computer Vision
 # Spring 2023
