@@ -20,22 +20,18 @@ import torchvision.transforms.functional as TF
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import wandb
 
-from evaluate import evaluate
-from unet.unet_model import UNet
-from utils.dice_score import dice_loss
-from utils.data_loading import MEOIDataset, BasicDataset
-
-dir_img = Path("../data/Image_Chips_128_nostride_balanced_dem/images/")
-dir_dem = Path("../data/Image_Chips_128_nostride_balanced_dem/images2/")
-dir_mask = Path("../data/Image_Chips_128_nostride_balanced_dem/labels/")
-dir_checkpoint = Path('./checkpoints/')
+from .evaluate import evaluate
+from .unet.unet_model import UNet
+from .utils.dice_score import dice_loss
+from .utils.data_loading import MEOIDataset, BasicDataset
 
 def train_model(
         model,
         device,
+        data_dir:Path,
         epochs:int=20, # 5->20
         batch_size:int=16, # 1->16
         learning_rate:float=1e-4, # 1e-5->1e-4
@@ -45,8 +41,12 @@ def train_model(
         amp:bool=False, # not mentioned in [2], need to check [1]
         weight_decay:float=1e-8, # not mentioned in [2], need to check [1]
         momentum:float=0.999, # not mentioned in [2], need to check [1]
-        gradient_clipping:float=1.0 # not mentioned in [2], need to check [1]
+        gradient_clipping:float=1.0, # not mentioned in [2], need to check [1]
+        dir_checkpoint="checkpoint/"
 ):
+    dir_img = os.path.join(data_dir, "images/")
+    dir_dem = os.path.join(data_dir, "images2/")
+    dir_mask = os.path.join(data_dir, "labels/")
     # 1. Create Dataset
     try:
         dataset = MEOIDataset(dir_img, dir_dem, dir_mask, img_scale)
@@ -64,7 +64,7 @@ def train_model(
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, **loader_args)
 
     # (Initialize logging)
-    experiment = wandb.init(project="U-Net", resume="allow", anonymous='must')
+    experiment = wandb.init(project="U-Net")
     experiment.config.update(
         dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
                 val_percent=val_percent, save_checkpoint=save_checkpoint, img_sclae=img_scale, amp=amp)
@@ -183,6 +183,8 @@ def get_args():
     parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=1, help='Number of classes')
+    parser.add_argument('--data-dir', dest='data_dir', type=Path, default="../data/Image_Chips_128_nostride_balanced_dem/", help="Directory containing dataset")
+    parser.add_argument('--dir-checkpoint', dest='dir_checkpoint', type=Path, default='./checkpoints/', help="Directory in which to store PyTorch checkpoints")
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -219,7 +221,8 @@ if __name__ == "__main__":
             device=device,
             img_scale=args.scale,
             val_percent=args.val / 100,
-            amp=args.amp
+            amp=args.amp,
+            data_dir=args.data_dir
         )
     except torch.cuda.OutOfMemoryError: # Giving me syntax error saying '"OutOfMemoryError" is not a valid exception class.'
         logging.error('Detected OutOfMemoryError! '
@@ -235,5 +238,7 @@ if __name__ == "__main__":
             device=device,
             img_scale=args.scale,
             val_percent=args.val / 100,
-            amp=args.amp
+            amp=args.amp,
+            data_dir=args.data_dir,
+            dir_checkpoint=args.dir_checkpoint
         )
