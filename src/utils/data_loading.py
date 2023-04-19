@@ -53,6 +53,14 @@ class BasicDataset(Dataset):
         if not self.ids:
             raise RuntimeError(f'No input file found in {images_dir}, make sure you put your images there')
         
+        assert len(self.ids) == len(self.dids)
+
+        if len(self.mids) == len(self.ids):
+            self.zero_masks = False
+        else:
+            logging.info("Dataset contains some all-zero masks")
+            self.zero_masks = True
+        
         logging.info(f'Creating dataset with {len(self.ids)} examples')
         logging.info('Scanning mask files to determine unique values')
         with Pool() as p:
@@ -115,10 +123,14 @@ class BasicDataset(Dataset):
 
         assert len(img_file) == 1, f'Either no image or multiple images found for the ID {img_name}: {img_file}'
         assert len(dem_file) == 1, f'Either no DEM or multiple DEM found for the ID {dem_name}: {dem_file}'
-        assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {mask_name}: {mask_file}'
-        mask = load_image(mask_file[0])
-        dem = load_image(dem_file[0])
         img = load_image(img_file[0])
+        dem = load_image(dem_file[0])
+
+        if self.zero_masks and len(mask_file) == 0:
+            mask = Image.new('L', img.size) # defaults to black image
+        else:
+            assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {mask_name}: {mask_file}'
+            mask = load_image(mask_file[0])
 
         assert img.size == mask.size, \
             f'Image {img_name} and mask {mask_name} should be the same size, but are {img.size} and {mask.size}'
