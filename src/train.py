@@ -70,7 +70,7 @@ def train_model(
     experiment = wandb.init(project="U-Net")
     experiment.config.update(
         dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
-                val_percent=val_percent, save_checkpoint=save_checkpoint, img_sclae=img_scale, amp=amp, transform=transform)
+                val_percent=val_percent, save_checkpoint=save_checkpoint, img_sclae=img_scale, amp=amp, transform=transform, data_dir=data_dir)
     )
 
     logging.info(f'''Starting training:
