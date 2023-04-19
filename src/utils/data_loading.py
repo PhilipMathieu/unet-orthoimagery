@@ -39,13 +39,14 @@ def unique_mask_values(idx, mask_dir, mask_suffix):
         raise ValueError(f'Loaded masks should have 2 or 3 dimensions, found {mask.ndim}')
     
 class BasicDataset(Dataset):
-    def __init__(self, images_dir: str, dem_dir: str, mask_dir: str, scale: float = 1.0, mask_suffix: str= ''):
+    def __init__(self, images_dir: str, dem_dir: str, mask_dir: str, scale: float = 1.0, mask_suffix: str= '', transform=None):
         self.images_dir = Path(images_dir)
         self.dem_dir = Path(dem_dir)
         self.mask_dir = Path(mask_dir)
         assert 0 < scale <= 1, 'Scale must be between 0 and 1'
         self.scale = scale
         self.mask_suffix = mask_suffix
+        self.transform = transform
 
         self.ids = [splitext(file)[0]  for file in listdir(images_dir) if isfile(join(images_dir, file)) and not file.startswith('.') and file.endswith('.tif')]
         self.dids = [splitext(file)[0]  for file in listdir(dem_dir) if isfile(join(dem_dir, file)) and not file.startswith('.') and file.endswith('.tif')]
@@ -137,5 +138,5 @@ class BasicDataset(Dataset):
         }
 
 class MEOIDataset(BasicDataset):
-    def __init__(self, images_dir, dem_dir, mask_dir, scale=1):
-        super().__init__(images_dir, dem_dir, mask_dir, scale, mask_suffix='_mask')
+    def __init__(self, images_dir, dem_dir, mask_dir, scale=1, transform=None):
+        super().__init__(images_dir, dem_dir, mask_dir, scale, mask_suffix='_mask', transform=transform)
