@@ -161,13 +161,14 @@ def train_model(
                                 'images': wandb.Image(images[0].cpu()),
                                 'masks':{
                                     'true': wandb.Image(true_masks[0].float().cpu()),
-                                    'pred': wandb.Image((F.sigmoid(masks_pred).squeeze(1) > 0.5).float().cpu()),
+                                    'pred': wandb.Image((F.sigmoid(masks_pred[0]).squeeze(1) > 0.5).float().cpu()),
                                 },
                                 'step': global_step,
                                 'epoch': epoch,
                                 **histograms
                             })
-                        except:
+                        except Exception as e:
+                            logging.warn(e)
                             pass
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
