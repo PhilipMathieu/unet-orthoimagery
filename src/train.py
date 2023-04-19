@@ -95,10 +95,10 @@ def train_model(
     global_step = 0
 
     # 5. Begin training
-    for epoch in range(1, epochs+1):
+    for epoch in tqdm(range(1, epochs+1), desc="Overall", unit="epochs"):
         model.train()
         epoch_loss = 0 
-        with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img') as pbar:
+        with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img', leave=False) as pbar:
             for batch in train_loader:
                 images, true_masks = batch['image'], batch['mask']
 
