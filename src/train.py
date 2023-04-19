@@ -135,7 +135,7 @@ def train_model(
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
                 # Evaluation round
-                division_step = (n_train // (5*batch_size))
+                division_step = (n_train // (3*batch_size))
                 if division_step > 0:
                     if global_step % division_step == 0:
                         histograms = {}
