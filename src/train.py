@@ -47,9 +47,12 @@ def train_model(
     dir_img = os.path.join(data_dir, "images/")
     dir_dem = os.path.join(data_dir, "images2/")
     dir_mask = os.path.join(data_dir, "labels/")
+    transform = T.Compose([T.RandomAffine(20,(0,0),(1,1.5),0.1),
+                                                T.CenterCrop((64,64)),
+                                                T.ToTensor()])
     # 1. Create Dataset
     try:
-        dataset = MEOIDataset(dir_img, dir_dem, dir_mask, img_scale)
+        dataset = MEOIDataset(dir_img, dir_dem, dir_mask, img_scale, transform=transform)
     except (AssertionError, RuntimeError, IndexError):
         dataset = BasicDataset(dir_img, dir_dem, dir_mask, img_scale)
 
@@ -67,7 +70,7 @@ def train_model(
     experiment = wandb.init(project="U-Net")
     experiment.config.update(
         dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
-                val_percent=val_percent, save_checkpoint=save_checkpoint, img_sclae=img_scale, amp=amp)
+                val_percent=val_percent, save_checkpoint=save_checkpoint, img_sclae=img_scale, amp=amp, transform=transform)
     )
 
     logging.info(f'''Starting training:
@@ -80,6 +83,7 @@ def train_model(
             Device:         {device.type}
             Images scaling: {img_scale}
             Mixed Precision:{amp}
+            Transform:{transform}
         ''')
     
     # 4. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP

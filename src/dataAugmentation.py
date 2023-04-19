@@ -20,6 +20,10 @@ from torchvision.utils import save_image
 from torch.utils.data import Subset
 import os
 
+from utils.data_loading import MEOIDataset
+
+torch.manual_seed(17) # for repeatability, see https://pytorch.org/vision/main/transforms.html
+
 def pil_loader(path):
     # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
     with open(path, 'rb') as f:
@@ -29,11 +33,18 @@ def pil_loader(path):
 # main function (yes, it needs a comment too)
 def main(argv):
     # handle any command line arguments in argv
-    print("hello world")
+    if os.path.exists("AD")==False:
+        os.mkdir("AD")
     if os.path.exists("AD/images")==False:
         os.mkdir("AD/images")
     if os.path.exists("AD/labels")==False:
         os.mkdir("AD/labels")
+
+    data_dir = 'data/Image_Chips_128_overlap_balanced_dem'
+    dir_img = os.path.join(data_dir, "images/")
+    dir_dem = os.path.join(data_dir, "images2/")
+    dir_mask = os.path.join(data_dir, "labels/")
+
     fig = plt.figure()
     data_transform_rotation = transforms.Compose([
                                      transforms.ToTensor()])
@@ -43,8 +54,9 @@ def main(argv):
     data_transform_randomCrop = transforms.Compose([transforms.RandomAffine(20,scale=(1,1.5)),
                                                 transforms.RandomCrop((64,64)),
                                                 transforms.ToTensor()])
-    test_data_affine = datasets.ImageFolder('data/Image_Chips_128_nostride_balanced_dem', transform=data_transform_affine, loader=pil_loader)
-    test_data_randomCrop = datasets.ImageFolder('data/Image_Chips_128_nostride_balanced_dem', transform=data_transform_randomCrop, loader=pil_loader)
+    test_data_affine = MEOIDataset(dir_img, dir_dem, dir_mask, transform=data_transform_affine)
+    test_data_randomCrop = MEOIDataset(dir_img, dir_dem, dir_mask, transform=data_transform_randomCrop)
+
     # Affine Transform
     idx = [i for i in range(len(test_data_affine)) if test_data_affine.imgs[i][1] == test_data_affine.class_to_idx['images']]
     labelIdx = [i for i in range(len(test_data_affine)) if test_data_affine.imgs[i][1] == test_data_affine.class_to_idx['labels']]
@@ -72,9 +84,11 @@ def main(argv):
     batch_idx, (randomCropLabels_data, myExample_targets) = next(randomCropLabels)
     transform = transforms.ToPILImage('RGBA')
     print(str(len(myTest_loader.dataset)))
+
+    # iterate over all items in the loader
     for i in range(len(myTest_loader.dataset)):
         # Affine
-        img = transform(myExample_data[i])
+        img = transform(myExample_data[i]) # apply ToPILImage('RGBA')
         rgba = img.convert("RGBA")
         datas = rgba.getdata()
         newData = []

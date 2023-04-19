@@ -139,4 +139,4 @@ class BasicDataset(Dataset):
 
 class MEOIDataset(BasicDataset):
     def __init__(self, images_dir, dem_dir, mask_dir, scale=1, transform=None):
-        super().__init__(images_dir, dem_dir, mask_dir, scale, mask_suffix='_mask', transform=transform)
+        super().__init__(images_dir, dem_dir, mask_dir, scale, transform=transform)
