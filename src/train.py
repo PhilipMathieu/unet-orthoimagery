@@ -163,7 +163,8 @@ def train_model(
                                 'epoch': epoch,
                                 **histograms
                             })
-                        except:
+                        except Exception as e:
+                            logging.warn(e)
                             pass
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
