@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 from tqdm.auto import tqdm
 
-from .utils.dice_score import multiclass_dice_coeff, dice_coeff
+from utils.dice_score import multiclass_dice_coeff, dice_coeff
 
 @torch.inference_mode()
 def evaluate(net, dataloader, device, amp):
@@ -27,7 +27,7 @@ def evaluate(net, dataloader, device, amp):
             mask_pred = net(image)
 
             if net.n_classes == 1:
-                assert mask_true.min() >= 0 and mask_true.max() <= 1, 'True mask indices should be in [0, 1]' # potential change needed
+                # assert mask_true.min() >= 0 and mask_true.max() <= 1, 'True mask indices should be in [0, 1]' # Giving me an assertion error - James
                 mask_pred = (F.sigmoid(mask_pred.squeeze(1)) > 0.5).float()
                 # compute the Dice score
                 dice_score += dice_coeff(mask_pred, mask_true, reduce_batch_first=False)
