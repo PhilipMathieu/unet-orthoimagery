@@ -100,7 +100,8 @@ class BasicDataset(Dataset):
         
             if is_dem:
                 img = (img - np.min(img))
-                img = img / (np.max(img) / 255)
+                if np.max(img) > 0:
+                    img = img / (np.max(img) / 255)
             else:
                 if (img > 1).any():
                     img = img / 255.0
@@ -115,22 +116,23 @@ class BasicDataset(Dataset):
     def __getitem__(self, idx):
         img_name = self.ids[idx]
         dem_name = self.dids[idx]
-        mask_name = self.mids[idx]
+        
         img_file = list(self.images_dir.glob(img_name + '.tif'))
         dem_file = list(self.dem_dir.glob(dem_name + '.tif'))
-        mask_file = list(self.mask_dir.glob(mask_name + self.mask_suffix + '.tif'))
-        
 
         assert len(img_file) == 1, f'Either no image or multiple images found for the ID {img_name}: {img_file}'
         assert len(dem_file) == 1, f'Either no DEM or multiple DEM found for the ID {dem_name}: {dem_file}'
         img = load_image(img_file[0])
         dem = load_image(dem_file[0])
 
-        if self.zero_masks and len(mask_file) == 0:
-            mask = Image.new('L', img.size) # defaults to black image
-        else:
+        try:
+            mask_name = self.mids[idx]
+            mask_file = list(self.mask_dir.glob(mask_name + self.mask_suffix + '.tif'))
             assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {mask_name}: {mask_file}'
             mask = load_image(mask_file[0])
+        except Exception as e:
+            logging.debug(f'Generating zero mask for {img_file}')
+            mask = Image.new('L', img.size) # defaults to black image
 
         assert img.size == mask.size, \
             f'Image {img_name} and mask {mask_name} should be the same size, but are {img.size} and {mask.size}'
