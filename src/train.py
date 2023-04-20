@@ -20,7 +20,7 @@ import torchvision.transforms.functional as TF
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 
-from tqdm.auto import tqdm
+from tqdm.autonotebook import tqdm
 import wandb
 
 from evaluate import evaluate
@@ -42,7 +42,8 @@ def train_model(
         weight_decay:float=1e-8, # not mentioned in [2], need to check [1]
         momentum:float=0.999, # not mentioned in [2], need to check [1]
         gradient_clipping:float=1.0, # not mentioned in [2], need to check [1]
-        dir_checkpoint="checkpoint/"
+        dir_checkpoint="checkpoint/",
+        debug=False
 ):
     dir_img = os.path.join(data_dir, "images/")
     dir_dem = os.path.join(data_dir, "images2/")
@@ -60,11 +61,14 @@ def train_model(
 
     # 3. Create data loaders
     loader_args = dict(batch_size = batch_size, num_workers=os.cpu_count(), pin_memory=True)
-    train_loader = DataLoader(train_set, shuffle=True, **loader_args)
+    train_loader = DataLoader(train_set, shuffle=True, drop_last=True, **loader_args)
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, **loader_args)
 
     # (Initialize logging)
-    experiment = wandb.init(project="U-Net")
+    if debug:
+        experiment = wandb.init(project="U-Net", mode="disabled")
+    else:
+        experiment = wandb.init(project="U-Net")
     experiment.config.update(
         dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
                 val_percent=val_percent, save_checkpoint=save_checkpoint, img_sclae=img_scale, amp=amp)
@@ -135,7 +139,7 @@ def train_model(
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
                 # Evaluation round
-                division_step = (n_train // (5*batch_size))
+                division_step = (n_train // (3*batch_size))
                 if division_step > 0:
                     if global_step % division_step == 0:
                         histograms = {}
@@ -148,7 +152,9 @@ def train_model(
                         
                         val_score = evaluate(model, val_loader, device, amp)
                         scheduler.step(val_score)
+
                         logging.info('Validation Dice score: {}'.format(val_score))
+
                         try:
                             experiment.log({
                                 'learning rate': optimizer.param_groups[0]['lr'],
@@ -175,16 +181,17 @@ def train_model(
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
     parser.add_argument('--epochs', '-e', metavar='E', type=int, default=20, help='Number of epochs')
-    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=16, help='Batch size')
+    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=32, help='Batch size')
     parser.add_argument('--learning-rate', '-l', dest='lr', metavar='LR', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
-    parser.add_argument('--scale', '-s', type=float, default=0.5, help='Downscaling factor of the images')
+    parser.add_argument('--scale', '-s', type=float, default=1.0, help='Downscaling factor of the images')
     parser.add_argument('--validation', '-v', dest='val', type=float, default=33.3, help='Percent of the data that is used as validation (0-100)')
     parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=1, help='Number of classes')
-    parser.add_argument('--data-dir', dest='data_dir', type=Path, default="../data/Image_Chips_128_nostride_balanced_dem/", help="Directory containing dataset")
+    parser.add_argument('--data-dir', dest='data_dir', type=Path, default="data/Image_Chips_128_overlap_unbalanced_dem/", help="Directory containing dataset")
     parser.add_argument('--dir-checkpoint', dest='dir_checkpoint', type=Path, default='./checkpoints/', help="Directory in which to store PyTorch checkpoints")
+    parser.add_argument('--debug', '-d', action='store_true', default=False, help='Use debugging mode (disable WandB uploads, etc.)')
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -222,7 +229,8 @@ if __name__ == "__main__":
             img_scale=args.scale,
             val_percent=args.val / 100,
             amp=args.amp,
-            data_dir=args.data_dir
+            data_dir=args.data_dir,
+            debug=args.debug
         )
     except torch.cuda.OutOfMemoryError: # Giving me syntax error saying '"OutOfMemoryError" is not a valid exception class.'
         logging.error('Detected OutOfMemoryError! '
@@ -240,5 +248,6 @@ if __name__ == "__main__":
             val_percent=args.val / 100,
             amp=args.amp,
             data_dir=args.data_dir,
-            dir_checkpoint=args.dir_checkpoint
+            dir_checkpoint=args.dir_checkpoint,
+            debug=args.debug
         )
