@@ -20,7 +20,7 @@ import torchvision.transforms.functional as TF
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 
-from tqdm.auto import tqdm
+from tqdm.autonotebook import tqdm
 import wandb
 
 from evaluate import evaluate
@@ -61,7 +61,7 @@ def train_model(
 
     # 3. Create data loaders
     loader_args = dict(batch_size = batch_size, num_workers=os.cpu_count(), pin_memory=True)
-    train_loader = DataLoader(train_set, shuffle=True, **loader_args)
+    train_loader = DataLoader(train_set, shuffle=True, drop_last=True, **loader_args)
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, **loader_args)
 
     # (Initialize logging)
@@ -153,7 +153,7 @@ def train_model(
                         val_score = evaluate(model, val_loader, device, amp)
                         scheduler.step(val_score)
 
-                        logging.info('Validation Dice score: {}'.format(val_score))
+                        # logging.info('Validation Dice score: {}'.format(val_score))
                         try:
                             experiment.log({
                                 'learning rate': optimizer.param_groups[0]['lr'],
