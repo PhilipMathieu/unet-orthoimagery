@@ -139,9 +139,9 @@ def train_model(
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
                 # Evaluation round
-                division_step = (n_train // (3*batch_size))
-                if division_step > 0:
-                    if global_step % division_step == 0:
+                division_step = (n_train // (5*batch_size)) # equivalent to floor(number of batches / 5)
+                if division_step > 0: # starting after 1/5 of the batches
+                    if global_step % division_step == 0: # run validation when global step is multiple of 1/5 number of batches
                         histograms = {}
                         for tag, value in model.named_parameters():
                             tag = tag.replace('/', '.')
