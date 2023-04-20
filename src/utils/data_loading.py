@@ -66,7 +66,7 @@ class BasicDataset(Dataset):
         with Pool() as p:
             unique = list(tqdm(
                 p.imap(partial(unique_mask_values, mask_dir = self.mask_dir, mask_suffix=self.mask_suffix), self.mids),
-                total = len(self.ids)
+                total = len(self.mids)
             ))
         
         self.mask_values = list(sorted(np.unique(np.concatenate(unique), axis=0).tolist()))
