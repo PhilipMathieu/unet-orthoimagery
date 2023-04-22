@@ -147,6 +147,15 @@ class MyDataset(Dataset):
 
 
 def main(data_dir: os.Path, output_dir: os.Path):
+    if os.path.exists(output_dir)==False:
+        os.mkdir(output_dir)
+    if os.path.exists(os.path.join(output_dir, "images/"))==False:
+        os.mkdir(os.path.join(output_dir, "images/"))
+    if os.path.exists(os.path.join(output_dir, "images2/"))==False:
+        os.mkdir(os.path.join(output_dir, "images2/"))
+    if os.path.exists(os.path.join(output_dir, "labels/"))==False:
+        os.mkdir(os.path.join(output_dir, "labels/"))
+    
     images_dir = os.path.join(data_dir, "images/")
     dem_dir = os.path.join(data_dir, "images2/")
     mask_dir = os.path.join(data_dir, "labels/")
@@ -283,12 +292,4 @@ def get_args():
 
 if __name__ == "__main__":
     args = get_args()
-    if os.path.exists(args.output_dir)==False:
-        os.mkdir(args.output_dir)
-    if os.path.exists(os.path.join(args.output_dir, "images/"))==False:
-        os.mkdir(os.path.join(args.output_dir, "images/"))
-    if os.path.exists(os.path.join(args.output_dir, "images2/"))==False:
-        os.mkdir(os.path.join(args.output_dir, "images2/"))
-    if os.path.exists(os.path.join(args.output_dir, "labels/"))==False:
-        os.mkdir(os.path.join(args.output_dir, "labels/"))
     main(args.data_dir, args.output_dir)
