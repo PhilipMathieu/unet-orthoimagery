@@ -138,7 +138,7 @@ def train_model(
                     'step': global_step,
                     'epoch': epoch
                 })
-                pbar.set_postfix(**{'Total loss (batch)': (loss + dloss).item()})
+                pbar.set_postfix(f'BCE Loss: {loss.item()}, Dice Loss: {dloss.item()}')
 
                 # Evaluation round
                 division_step = (n_train // (3*batch_size))
