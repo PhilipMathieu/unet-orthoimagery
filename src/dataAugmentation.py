@@ -146,14 +146,14 @@ class MyDataset(Dataset):
         return len(self.image_paths)
 
 
-def main(args):
-    images_dir = os.path.join(args.data_dir, "images/")
-    dem_dir = os.path.join(args.data_dir, "images2/")
-    mask_dir = os.path.join(args.data_dir, "labels/")
-    images_dir_out = os.path.join(args.output_dir, "images/")
-    dem_dir_out = os.path.join(args.output_dir, "images2/")
-    mask_dir_out = os.path.join(args.output_dir, "labels/")
-    
+def main(data_dir: os.Path, output_dir: os.Path):
+    images_dir = os.path.join(data_dir, "images/")
+    dem_dir = os.path.join(data_dir, "images2/")
+    mask_dir = os.path.join(data_dir, "labels/")
+    images_dir_out = os.path.join(output_dir, "images/")
+    dem_dir_out = os.path.join(output_dir, "images2/")
+    mask_dir_out = os.path.join(output_dir, "labels/")
+
     transform_loader = MyDataset(images_dir, dem_dir, mask_dir, transformFunction)
     horizontal_transform_loader = MyDataset(images_dir, dem_dir, mask_dir, horizontalFlipTransformFunction)
     vertical_transform_loader = MyDataset(images_dir, dem_dir, mask_dir, verticalFlipTransformFunction)
@@ -291,4 +291,4 @@ if __name__ == "__main__":
         os.mkdir(os.path.join(args.output_dir, "images2/"))
     if os.path.exists(os.path.join(args.output_dir, "labels/"))==False:
         os.mkdir(os.path.join(args.output_dir, "labels/"))
-    main(args)
+    main(args.data_dir, args.output_dir)
