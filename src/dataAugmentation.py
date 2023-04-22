@@ -37,9 +37,8 @@ def horizontalFlipTransformFunction(image, mask):
     mask = mask.resize((64,64))
 
     # Random horizontal flipping
-    if random() > 0.5:
-        image = transforms.functional.hflip(image)
-        mask = transforms.functional.hflip(mask)
+    image = transforms.functional.hflip(image)
+    mask = transforms.functional.hflip(mask)
 
     # Transform to tensor
     image = transforms.functional.to_tensor(image)
@@ -53,9 +52,8 @@ def verticalFlipTransformFunction(image, mask):
     mask = mask.resize((64,64))
 
     # Random vertical flipping
-    if random() > 0.5:
-        image = transforms.functional.vflip(image)
-        mask = transforms.functional.vflip(mask)
+    image = transforms.functional.vflip(image)
+    mask = transforms.functional.vflip(mask)
 
     # Transform to tensor
     image = transforms.functional.to_tensor(image)
@@ -85,9 +83,10 @@ def transformFunction(image, mask):
     image = transforms.functional.affine(image,angle=0,translate=(0,0),shear=10,scale=1)
     mask = transforms.functional.affine(mask,angle=0,translate=(0,0),shear=10,scale=1)
 
-    # Scale
-    image = transforms.functional.affine(image,angle=0,translate=(0,0),shear=0,scale=1.5)
-    mask = transforms.functional.affine(mask,angle=0,translate=(0,0),shear=0,scale=1.5)
+    # Rnadom Scale
+    randomScale = random()+1
+    image = transforms.functional.affine(image,angle=0,translate=(0,0),shear=0,scale=randomScale)
+    mask = transforms.functional.affine(mask,angle=0,translate=(0,0),shear=0,scale=randomScale)
 
     #Random crop
     i, j, h, w = transforms.RandomCrop.get_params(
