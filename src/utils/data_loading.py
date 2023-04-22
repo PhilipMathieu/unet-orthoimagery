@@ -89,9 +89,9 @@ class BasicDataset(Dataset):
         return len(self.ids)
     
     def _process_stats(self):
-        self.pos_weight = self.stats["FeatureStats"]["NumFeaturesPerClass"] \
-              * self.stats["FeatureStats"]["FeatureAreaPerClass"][0]["Mean"] \
-                / (self.stats["FeatureStats"]["NumImagesTotal"]*64*64)
+        self.pos_weight = (self.stats["FeatureStats"]["NumImagesTotal"]*64*64) \
+            / (self.stats["FeatureStats"]["NumFeaturesPerClass"] \
+              * self.stats["FeatureStats"]["FeatureAreaPerClass"][0]["Mean"])
 
     @staticmethod
     def preprocess(mask_values, pil_img, scale, is_mask, is_dem):
