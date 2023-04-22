@@ -150,12 +150,13 @@ def train_model(
                         val_score = evaluate(model, val_loader, device, amp)
                         scheduler.step(val_score)
 
-                        # logging.info('Validation Dice score: {}'.format(val_score))
+                        logging.info('Validation Dice score: {}'.format(val_score))
+
                         try:
                             experiment.log({
                                 'learning rate': optimizer.param_groups[0]['lr'],
                                 'validation Dice': val_score,
-                                'images': wandb.Image(images[0].cpu()),
+                                'images': wandb.Image(images[0][:3,:,:].cpu()), # Log only RGB
                                 'masks':{
                                     'true': wandb.Image(true_masks[0].float().cpu()),
                                     'pred': wandb.Image((F.sigmoid(masks_pred[0]).squeeze(1) > 0.5).float().cpu()),
