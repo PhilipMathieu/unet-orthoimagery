@@ -1,4 +1,4 @@
-# Final Project
+# Hao Sheng (Jack) Ning Final Project
 # Used for Data Augmentation
 # CS 5330 Computer Vision
 # Spring 2023
@@ -9,7 +9,7 @@ import numpy as np
 from torch.utils.data import Dataset
 from torchvision import datasets
 from torchvision import transforms
-from torchvision.transforms import functional
+from torchvision.transforms import functional, ToTensor
 import matplotlib.pyplot as plt
 import torch.nn as nn
 import torch.nn.functional as F
@@ -19,17 +19,120 @@ from PIL import Image
 from torchvision.utils import save_image
 from torch.utils.data import Subset
 import os
+from torchvision.io import read_image
+from random import random
+
+magnitude = 4
 
 def pil_loader(path):
     # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
     with open(path, 'rb') as f:
         img = Image.open(f)
         return img.convert('RGBA')
+    
+def horizontalFlipTransformFunction(image, mask):
+    # Resize
+    resize = transforms.Resize(size=(64, 64))
+    image = resize(image)
+    mask = mask.resize((64,64))
+
+    # Random horizontal flipping
+    if random() > 0.5:
+        image = transforms.functional.hflip(image)
+        mask = transforms.functional.hflip(mask)
+
+    # Transform to tensor
+    image = transforms.functional.to_tensor(image)
+    mask = transforms.functional.to_tensor(mask)
+    return image, mask
+
+def verticalFlipTransformFunction(image, mask):
+    # Resize
+    resize = transforms.Resize(size=(64, 64))
+    image = resize(image)
+    mask = mask.resize((64,64))
+
+    # Random vertical flipping
+    if random() > 0.5:
+        image = transforms.functional.vflip(image)
+        mask = transforms.functional.vflip(mask)
+
+    # Transform to tensor
+    image = transforms.functional.to_tensor(image)
+    mask = transforms.functional.to_tensor(mask)
+    return image, mask
+
+def randomCropTransformFunction(image, mask):
+
+    #Random crop
+    i, j, h, w = transforms.RandomCrop.get_params(
+        image, output_size=(64, 64))
+    image = transforms.functional.crop(image, i, j, h, w)
+    mask = transforms.functional.crop(mask, i, j, h, w)
+
+    # Transform to tensor
+    image = transforms.functional.to_tensor(image)
+    mask = transforms.functional.to_tensor(mask)
+    return image, mask
+    
+def transformFunction(image, mask):
+    # Resize
+    resize = transforms.Resize(size=(128, 128))
+    image = resize(image)
+    mask = resize(mask)
+
+    # Shear
+    image = transforms.functional.affine(image,angle=0,translate=(0,0),shear=10,scale=1)
+    mask = transforms.functional.affine(mask,angle=0,translate=(0,0),shear=10,scale=1)
+
+    # Scale
+    image = transforms.functional.affine(image,angle=0,translate=(0,0),shear=0,scale=1.5)
+    mask = transforms.functional.affine(mask,angle=0,translate=(0,0),shear=0,scale=1.5)
+
+    #Random crop
+    i, j, h, w = transforms.RandomCrop.get_params(
+        image, output_size=(64, 64))
+    image = transforms.functional.crop(image, i, j, h, w)
+    mask = transforms.functional.crop(mask, i, j, h, w)
+
+    # Random horizontal flipping
+    if random() > 0.5:
+        image = transforms.functional.hflip(image)
+        mask = transforms.functional.hflip(mask)
+
+    # Random vertical flipping
+    if random() > 0.5:
+        image = transforms.functional.vflip(image)
+        mask = transforms.functional.vflip(mask)
+
+    # Transform to tensor
+    image = transforms.functional.to_tensor(image)
+    mask = transforms.functional.to_tensor(mask)
+    return image, mask
+
+class MyDataset(Dataset):
+    def __init__(self, image_paths, target_paths, transform, train=True):
+        self.image_paths = image_paths
+        self.target_paths = target_paths
+        self.transform = transform
+    
+
+    def __getitem__(self, index):
+        filenames = [name for name in os.listdir(self.image_paths) if os.path.splitext(name)[-1] == '.tif']
+        image = Image.open(os.path.join(self.image_paths,filenames[index]))
+        mask = Image.open(os.path.join(self.target_paths,filenames[index]))
+        x, y = self.transform(image, mask)
+        return x, y
+
+    def __len__(self):
+        return len(self.image_paths)
 
 # main function (yes, it needs a comment too)
 def main(argv):
     # handle any command line arguments in argv
     print("hello world")
+    if os.path.exists("AD")==False:
+        os.mkdir("AD")
     if os.path.exists("AD/images")==False:
         os.mkdir("AD/images")
     if os.path.exists("AD/labels")==False:
@@ -37,76 +140,93 @@ def main(argv):
     fig = plt.figure()
     data_transform_rotation = transforms.Compose([
                                      transforms.ToTensor()])
-    data_transform_affine = transforms.Compose([transforms.RandomAffine(20,(0,0),(1,1.5),0.1),
+    data_transform_affine = transforms.Compose([transforms.RandomAffine(20,(0,1),(1,1.5),0.1),
                                                 transforms.CenterCrop((64,64)),
                                                 transforms.ToTensor()])
     data_transform_randomCrop = transforms.Compose([transforms.RandomAffine(20,scale=(1,1.5)),
                                                 transforms.RandomCrop((64,64)),
                                                 transforms.ToTensor()])
-    test_data_affine = datasets.ImageFolder('data/Image_Chips_128_nostride_balanced_dem', transform=data_transform_affine, loader=pil_loader)
-    test_data_randomCrop = datasets.ImageFolder('data/Image_Chips_128_nostride_balanced_dem', transform=data_transform_randomCrop, loader=pil_loader)
-    # Affine Transform
-    idx = [i for i in range(len(test_data_affine)) if test_data_affine.imgs[i][1] == test_data_affine.class_to_idx['images']]
-    labelIdx = [i for i in range(len(test_data_affine)) if test_data_affine.imgs[i][1] == test_data_affine.class_to_idx['labels']]
-    # build the appropriate subset
-    subset = Subset(test_data_affine, idx)
-    labelSubset = Subset(test_data_affine, labelIdx)
-    myTest_loader = torch.utils.data.DataLoader(subset,batch_size=len(subset), shuffle=False)
-    label_loader = torch.utils.data.DataLoader(labelSubset,batch_size=len(labelSubset), shuffle=False)
-    myExamples = enumerate(myTest_loader)
-    batch_idx, (myExample_data, myExample_targets) = next(myExamples)
-    myLabels = enumerate(label_loader)
-    batch_idx, (myLabels_data, myExample_targets) = next(myLabels)
 
-    # Random Crop Transform
-    idx = [i for i in range(len(test_data_randomCrop)) if test_data_randomCrop.imgs[i][1] == test_data_randomCrop.class_to_idx['images']]
-    labelIdx = [i for i in range(len(test_data_randomCrop)) if test_data_randomCrop.imgs[i][1] == test_data_randomCrop.class_to_idx['labels']]
-    # build the appropriate subset
-    randomCropSubset = Subset(test_data_randomCrop, idx)
-    randomCropLabelSubset = Subset(test_data_randomCrop, labelIdx)
-    randomCropMyTest_loader = torch.utils.data.DataLoader(randomCropSubset,batch_size=len(subset), shuffle=False)
-    randomCropLabel_loader = torch.utils.data.DataLoader(randomCropLabelSubset,batch_size=len(labelSubset), shuffle=False)
-    randomCropMyExamples = enumerate(randomCropMyTest_loader)
-    batch_idx, (randomCropMyExample_data, myExample_targets) = next(randomCropMyExamples)
-    randomCropLabels = enumerate(randomCropLabel_loader)
-    batch_idx, (randomCropLabels_data, myExample_targets) = next(randomCropLabels)
+    transform_loader = MyDataset('data/Image_Chips_128_overlap_balanced_dem/images','data/Image_Chips_128_overlap_balanced_dem/labels',transformFunction)
+    horizontal_transform_loader = MyDataset('data/Image_Chips_128_overlap_balanced_dem/images','data/Image_Chips_128_overlap_balanced_dem/labels',horizontalFlipTransformFunction)
+    vertical_transform_loader = MyDataset('data/Image_Chips_128_overlap_balanced_dem/images','data/Image_Chips_128_overlap_balanced_dem/labels',verticalFlipTransformFunction)
+    random_crop_transform_loader = MyDataset('data/Image_Chips_128_overlap_balanced_dem/images','data/Image_Chips_128_overlap_balanced_dem/labels',randomCropTransformFunction)
+
     transform = transforms.ToPILImage('RGBA')
-    print(str(len(myTest_loader.dataset)))
-    for i in range(len(myTest_loader.dataset)):
-        # Affine
-        img = transform(myExample_data[i])
-        rgba = img.convert("RGBA")
+    regTransform=transforms.ToPILImage()
+    #print(str(len(myTest_loader.dataset)))
+    for idx, img in enumerate(transform_loader):
+       # Affine
+        image = transform(img[0])
+        rgba = image.convert("RGBA")
         datas = rgba.getdata()
         newData = []
         for item in datas:
-            if item[0] == 255 and item[1] == 255 and item[2] == 0:  # finding yellow colour
-                # replacing it with a transparent value
-                newData.append((255, 255, 255, 0))
-            else:
-                newData.append(item)
+            newData.append(item)
         rgba.putdata(newData)
-        rgba.save("AD/images/file"+str(i*2)+".tif", "TIFF")
-        save_image(myLabels_data[i],"AD/labels/file"+str(i*2)+".tif","TIFF")
+        rgba.save("AD/images/file"+str(idx*magnitude+0)+".tif", "TIFF")
+        label = regTransform(img[1]) 
+        datas = label.getdata()
+        newData = []
+        for item in datas:
+            newData.append(item)
+        label.putdata(newData)
+        label.save("AD/labels/file"+str(idx*magnitude+0)+".tif","TIFF")
 
-        # Random Crop
-        img = transform(randomCropMyExample_data[i])
-        rgba = img.convert("RGBA")
+    for idx, img in enumerate(horizontal_transform_loader):
+       # Horizontal
+        image = transform(img[0])
+        rgba = image.convert("RGBA")
         datas = rgba.getdata()
         newData = []
         for item in datas:
-            if item[0] == 255 and item[1] == 255 and item[2] == 0:  # finding yellow colour
-                # replacing it with a transparent value
-                newData.append((255, 255, 255, 0))
-            else:
-                newData.append(item)
+            newData.append(item)
         rgba.putdata(newData)
-        rgba.save("AD/images/file"+str(i*2+1)+".tif", "TIFF")
-        save_image(randomCropLabels_data[i],"AD/labels/file"+str(i*2+1)+".tif","TIFF")
-    print(myExample_data[0].shape)
+        rgba.save("AD/images/file"+str(idx*magnitude+1)+".tif", "TIFF")
+        label = regTransform(img[1]) 
+        datas = label.getdata()
+        newData = []
+        for item in datas:
+            newData.append(item)
+        label.putdata(newData)
+        label.save("AD/labels/file"+str(idx*magnitude+1)+".tif","TIFF")
+
+    for idx, img in enumerate(vertical_transform_loader):
+       # Vertical
+        image = transform(img[0])
+        rgba = image.convert("RGBA")
+        datas = rgba.getdata()
+        newData = []
+        for item in datas:
+            newData.append(item)
+        rgba.putdata(newData)
+        rgba.save("AD/images/file"+str(idx*magnitude+2)+".tif", "TIFF")
+        label = regTransform(img[1]) 
+        datas = label.getdata()
+        newData = []
+        for item in datas:
+            newData.append(item)
+        label.putdata(newData)
+        label.save("AD/labels/file"+str(idx*magnitude+2)+".tif","TIFF")
     
-    # if __name__ == "__dataAugmentation__":
-    #     print("Yes")
-    #     main(sys.argv)
+    for idx, img in enumerate(random_crop_transform_loader):
+       # Horizontal
+        image = transform(img[0])
+        rgba = image.convert("RGBA")
+        datas = rgba.getdata()
+        newData = []
+        for item in datas:
+            newData.append(item)
+        rgba.putdata(newData)
+        rgba.save("AD/images/file"+str(idx*magnitude+3)+".tif", "TIFF")
+        label = regTransform(img[1]) 
+        datas = label.getdata()
+        newData = []
+        for item in datas:
+            newData.append(item)
+        label.putdata(newData)
+        label.save("AD/labels/file"+str(idx*magnitude+3)+".tif","TIFF")
+
     return
 if __name__ == "__main__":
     main(sys.argv)
