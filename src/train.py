@@ -134,6 +134,7 @@ def train_model(
                 experiment.log({
                     'BCE Loss': loss.item(),
                     'Dice Loss': dloss.item(),
+                    'train loss': (loss + dloss).item(),
                     'step': global_step,
                     'epoch': epoch
                 })
