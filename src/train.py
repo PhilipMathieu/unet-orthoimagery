@@ -45,14 +45,11 @@ def train_model(
         dir_checkpoint="checkpoint/",
         debug=False
 ):
-    dir_img = os.path.join(data_dir, "images/")
-    dir_dem = os.path.join(data_dir, "images2/")
-    dir_mask = os.path.join(data_dir, "labels/")
     # 1. Create Dataset
     try:
-        dataset = MEOIDataset(dir_img, dir_dem, dir_mask, img_scale)
+        dataset = MEOIDataset(data_dir, img_scale)
     except (AssertionError, RuntimeError, IndexError):
-        dataset = BasicDataset(dir_img, dir_dem, dir_mask, img_scale)
+        dataset = BasicDataset(data_dir, img_scale)
 
     # 2. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)
@@ -91,7 +88,7 @@ def train_model(
                                 lr=learning_rate, weight_decay=weight_decay, momentum=momentum, foreach=True)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5) # goal: maximize Dice score # not mentioned in [2], need to check [1]
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp) # Need to check
-    criterion = nn.CrossEntropyLoss() if model.n_classes > 1 else nn.BCEWithLogitsLoss()
+    criterion = nn.CrossEntropyLoss() if model.n_classes > 1 else nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([dataset.pos_weight]).to(device))
     global_step = 0
 
     # 5. Begin training
@@ -139,9 +136,9 @@ def train_model(
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
                 # Evaluation round
-                division_step = (n_train // (3*batch_size))
-                if division_step > 0:
-                    if global_step % division_step == 0:
+                division_step = (n_train // (5*batch_size)) # equivalent to floor(number of batches / 5)
+                if division_step > 0: # starting after 1/5 of the batches
+                    if global_step % division_step == 0: # run validation when global step is multiple of 1/5 number of batches
                         histograms = {}
                         for tag, value in model.named_parameters():
                             tag = tag.replace('/', '.')

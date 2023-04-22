@@ -3,6 +3,7 @@
 # date: Apr 14, 2023
 
 import logging
+import os
 import numpy as np
 import torch
 from PIL import Image
@@ -15,6 +16,7 @@ from os.path import splitext, isfile, join
 from pathlib import Path
 from torch.utils.data import Dataset
 from tqdm.autonotebook import tqdm
+import json
 
 def load_image(filename):
     ext = splitext(filename)[1]
@@ -39,26 +41,45 @@ def unique_mask_values(idx, mask_dir, mask_suffix):
         raise ValueError(f'Loaded masks should have 2 or 3 dimensions, found {mask.ndim}')
     
 class BasicDataset(Dataset):
-    def __init__(self, images_dir: str, dem_dir: str, mask_dir: str, scale: float = 1.0, mask_suffix: str= ''):
-        self.images_dir = Path(images_dir)
-        self.dem_dir = Path(dem_dir)
-        self.mask_dir = Path(mask_dir)
+    def __init__(self, data_dir: str, scale: float = 1.0, mask_suffix: str= ''):
+        self.images_dir = Path(os.path.join(data_dir, "images/"))
+        self.dem_dir = Path(os.path.join(data_dir, "images2/"))
+        self.mask_dir = Path(os.path.join(data_dir, "labels/"))
+        self.pos_weight = 1.0
+        
+        try:
+            with open(os.path.join(data_dir, 'esri_accumulated_stats.json'), 'r') as file:
+                self.stats = json.load(file)
+            logging.info("Retrieved dataset stats from JSON")
+            self._process_stats()
+        except:
+            self.stats = None
+            logging.debug("Could not read dataset stats from JSON")
+        
         assert 0 < scale <= 1, 'Scale must be between 0 and 1'
         self.scale = scale
         self.mask_suffix = mask_suffix
 
-        self.ids = [splitext(file)[0]  for file in listdir(images_dir) if isfile(join(images_dir, file)) and not file.startswith('.') and file.endswith('.tif')]
-        self.dids = [splitext(file)[0]  for file in listdir(dem_dir) if isfile(join(dem_dir, file)) and not file.startswith('.') and file.endswith('.tif')]
-        self.mids = [splitext(file)[0]  for file in listdir(mask_dir) if isfile(join(mask_dir, file)) and not file.startswith('.') and file.endswith('.tif')]
+        self.ids = [splitext(file)[0]  for file in listdir(self.images_dir) if isfile(join(self.images_dir, file)) and not file.startswith('.') and file.endswith('.tif')]
+        self.dids = [splitext(file)[0]  for file in listdir(self.dem_dir) if isfile(join(self.dem_dir, file)) and not file.startswith('.') and file.endswith('.tif')]
+        self.mids = [splitext(file)[0]  for file in listdir(self.mask_dir) if isfile(join(self.mask_dir, file)) and not file.startswith('.') and file.endswith('.tif')]
         if not self.ids:
-            raise RuntimeError(f'No input file found in {images_dir}, make sure you put your images there')
+            raise RuntimeError(f'No input file found in {self.images_dir}, make sure you put your images there')
+        
+        assert len(self.ids) == len(self.dids)
+
+        if len(self.mids) == len(self.ids):
+            self.zero_masks = False
+        else:
+            logging.info("Dataset contains some all-zero masks")
+            self.zero_masks = True
         
         logging.info(f'Creating dataset with {len(self.ids)} examples')
         logging.info('Scanning mask files to determine unique values')
         with Pool() as p:
             unique = list(tqdm(
                 p.imap(partial(unique_mask_values, mask_dir = self.mask_dir, mask_suffix=self.mask_suffix), self.mids),
-                total = len(self.ids)
+                total = len(self.mids)
             ))
         
         self.mask_values = list(sorted(np.unique(np.concatenate(unique), axis=0).tolist()))
@@ -67,6 +88,11 @@ class BasicDataset(Dataset):
     def __len__(self):
         return len(self.ids)
     
+    def _process_stats(self):
+        self.pos_weight = (self.stats["FeatureStats"]["NumImagesTotal"]*64*64) \
+            / (self.stats["FeatureStats"]["NumFeaturesPerClass"] \
+              * self.stats["FeatureStats"]["FeatureAreaPerClass"][0]["Mean"])
+
     @staticmethod
     def preprocess(mask_values, pil_img, scale, is_mask, is_dem):
         w, h = pil_img.size
@@ -92,7 +118,8 @@ class BasicDataset(Dataset):
         
             if is_dem:
                 img = (img - np.min(img))
-                img = img / (np.max(img) / 255)
+                if np.max(img) > 0:
+                    img = img / (np.max(img) / 255)
             else:
                 if (img > 1).any():
                     img = img / 255.0
@@ -107,18 +134,23 @@ class BasicDataset(Dataset):
     def __getitem__(self, idx):
         img_name = self.ids[idx]
         dem_name = self.dids[idx]
-        mask_name = self.mids[idx]
+        
         img_file = list(self.images_dir.glob(img_name + '.tif'))
         dem_file = list(self.dem_dir.glob(dem_name + '.tif'))
-        mask_file = list(self.mask_dir.glob(mask_name + self.mask_suffix + '.tif'))
-        
 
         assert len(img_file) == 1, f'Either no image or multiple images found for the ID {img_name}: {img_file}'
         assert len(dem_file) == 1, f'Either no DEM or multiple DEM found for the ID {dem_name}: {dem_file}'
-        assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {mask_name}: {mask_file}'
-        mask = load_image(mask_file[0])
-        dem = load_image(dem_file[0])
         img = load_image(img_file[0])
+        dem = load_image(dem_file[0])
+
+        try:
+            mask_name = self.mids[idx]
+            mask_file = list(self.mask_dir.glob(mask_name + self.mask_suffix + '.tif'))
+            assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {mask_name}: {mask_file}'
+            mask = load_image(mask_file[0])
+        except Exception as e:
+            logging.debug(f'Generating zero mask for {img_file}')
+            mask = Image.new('L', img.size) # defaults to black image
 
         assert img.size == mask.size, \
             f'Image {img_name} and mask {mask_name} should be the same size, but are {img.size} and {mask.size}'
@@ -137,5 +169,5 @@ class BasicDataset(Dataset):
         }
 
 class MEOIDataset(BasicDataset):
-    def __init__(self, images_dir, dem_dir, mask_dir, scale=1):
-        super().__init__(images_dir, dem_dir, mask_dir, scale, mask_suffix='_mask')
+    def __init__(self, data_dir, scale=1):
+        super().__init__(data_dir, scale, mask_suffix='_mask')
