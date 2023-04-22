@@ -21,6 +21,7 @@ from torch.utils.data import Subset
 import os
 from torchvision.io import read_image
 from random import random
+import argparse
 
 magnitude = 4
 
@@ -144,32 +145,19 @@ class MyDataset(Dataset):
     def __len__(self):
         return len(self.image_paths)
 
-# main function (yes, it needs a comment too)
-def main(argv):
-    # handle any command line arguments in argv
-    print("hello world")
-    if os.path.exists("AD")==False:
-        os.mkdir("AD")
-    if os.path.exists("AD/images")==False:
-        os.mkdir("AD/images")
-    if os.path.exists("AD/images2")==False:
-        os.mkdir("AD/images2")
-    if os.path.exists("AD/labels")==False:
-        os.mkdir("AD/labels")
-    fig = plt.figure()
-    data_transform_rotation = transforms.Compose([
-                                     transforms.ToTensor()])
-    data_transform_affine = transforms.Compose([transforms.RandomAffine(20,(0,1),(1,1.5),0.1),
-                                                transforms.CenterCrop((64,64)),
-                                                transforms.ToTensor()])
-    data_transform_randomCrop = transforms.Compose([transforms.RandomAffine(20,scale=(1,1.5)),
-                                                transforms.RandomCrop((64,64)),
-                                                transforms.ToTensor()])
 
-    transform_loader = MyDataset('data/Image_Chips_128_overlap_balanced_dem/images','data/Image_Chips_128_overlap_balanced_dem/images2','data/Image_Chips_128_overlap_balanced_dem/labels',transformFunction)
-    horizontal_transform_loader = MyDataset('data/Image_Chips_128_overlap_balanced_dem/images','data/Image_Chips_128_overlap_balanced_dem/images2','data/Image_Chips_128_overlap_balanced_dem/labels',horizontalFlipTransformFunction)
-    vertical_transform_loader = MyDataset('data/Image_Chips_128_overlap_balanced_dem/images','data/Image_Chips_128_overlap_balanced_dem/images2','data/Image_Chips_128_overlap_balanced_dem/labels',verticalFlipTransformFunction)
-    random_crop_transform_loader = MyDataset('data/Image_Chips_128_overlap_balanced_dem/images','data/Image_Chips_128_overlap_balanced_dem/images2','data/Image_Chips_128_overlap_balanced_dem/labels',randomCropTransformFunction)
+def main(args):
+    images_dir = os.path.join(args.data_dir, "images/")
+    dem_dir = os.path.join(args.data_dir, "images2/")
+    mask_dir = os.path.join(args.data_dir, "labels/")
+    images_dir_out = os.path.join(args.output_dir, "images/")
+    dem_dir_out = os.path.join(args.output_dir, "images2/")
+    mask_dir_out = os.path.join(args.output_dir, "labels/")
+    
+    transform_loader = MyDataset(images_dir, dem_dir, mask_dir, transformFunction)
+    horizontal_transform_loader = MyDataset(images_dir, dem_dir, mask_dir, horizontalFlipTransformFunction)
+    vertical_transform_loader = MyDataset(images_dir, dem_dir, mask_dir, verticalFlipTransformFunction)
+    random_crop_transform_loader = MyDataset(images_dir, dem_dir, mask_dir, randomCropTransformFunction)
 
     transform = transforms.ToPILImage('RGBA')
     regTransform=transforms.ToPILImage()
@@ -183,7 +171,7 @@ def main(argv):
         for item in datas:
             newData.append(item)
         rgba.putdata(newData)
-        rgba.save("AD/images/file"+str(idx*magnitude+0)+".tif", "TIFF")
+        rgba.save(images_dir_out + "file"+str(idx*magnitude+0)+".tif", "TIFF")
         # dem
         dem = regTransform(img[1])
         datas = dem.getdata()
@@ -191,7 +179,7 @@ def main(argv):
         for item in datas:
             newData.append(item)
         dem.putdata(newData)
-        dem.save("AD/images2/file"+str(idx*magnitude+0)+".tif", "TIFF")
+        dem.save(dem_dir_out+"file"+str(idx*magnitude+0)+".tif", "TIFF")
         # labels
         label = regTransform(img[2]) 
         datas = label.getdata()
@@ -199,7 +187,7 @@ def main(argv):
         for item in datas:
             newData.append(item)
         label.putdata(newData)
-        label.save("AD/labels/file"+str(idx*magnitude+0)+".tif","TIFF")
+        label.save(mask_dir_out + "file"+str(idx*magnitude+0)+".tif", "TIFF")
 
     for idx, img in enumerate(horizontal_transform_loader):
         # Horizontal
@@ -211,7 +199,7 @@ def main(argv):
         for item in datas:
             newData.append(item)
         rgba.putdata(newData)
-        rgba.save("AD/images/file"+str(idx*magnitude+1)+".tif", "TIFF")
+        rgba.save(images_dir_out + "file"+str(idx*magnitude+0)+".tif", "TIFF")
         # dem
         dem = regTransform(img[1])
         datas = dem.getdata()
@@ -219,7 +207,7 @@ def main(argv):
         for item in datas:
             newData.append(item)
         dem.putdata(newData)
-        dem.save("AD/images2/file"+str(idx*magnitude+1)+".tif", "TIFF")
+        dem.save(dem_dir_out+"file"+str(idx*magnitude+0)+".tif", "TIFF")
         # label
         label = regTransform(img[2]) 
         datas = label.getdata()
@@ -227,7 +215,7 @@ def main(argv):
         for item in datas:
             newData.append(item)
         label.putdata(newData)
-        label.save("AD/labels/file"+str(idx*magnitude+1)+".tif","TIFF")
+        label.save(mask_dir_out + "file"+str(idx*magnitude+0)+".tif", "TIFF")
 
     for idx, img in enumerate(vertical_transform_loader):
         # Vertical
@@ -239,7 +227,7 @@ def main(argv):
         for item in datas:
             newData.append(item)
         rgba.putdata(newData)
-        rgba.save("AD/images/file"+str(idx*magnitude+2)+".tif", "TIFF")
+        rgba.save(images_dir_out + "file"+str(idx*magnitude+0)+".tif", "TIFF")
         # dem
         dem = regTransform(img[1])
         datas = dem.getdata()
@@ -247,7 +235,7 @@ def main(argv):
         for item in datas:
             newData.append(item)
         dem.putdata(newData)
-        dem.save("AD/images2/file"+str(idx*magnitude+2)+".tif", "TIFF")
+        dem.save(dem_dir_out+"file"+str(idx*magnitude+0)+".tif", "TIFF")
         # labels
         label = regTransform(img[2]) 
         datas = label.getdata()
@@ -255,7 +243,7 @@ def main(argv):
         for item in datas:
             newData.append(item)
         label.putdata(newData)
-        label.save("AD/labels/file"+str(idx*magnitude+2)+".tif","TIFF")
+        label.save(mask_dir_out + "file"+str(idx*magnitude+0)+".tif", "TIFF")
     
     for idx, img in enumerate(random_crop_transform_loader):
         # Random Crop
@@ -267,7 +255,7 @@ def main(argv):
         for item in datas:
             newData.append(item)
         rgba.putdata(newData)
-        rgba.save("AD/images/file"+str(idx*magnitude+3)+".tif", "TIFF")
+        rgba.save(images_dir_out + "file"+str(idx*magnitude+0)+".tif", "TIFF")
         # DEM
         dem = regTransform(img[1])
         datas = dem.getdata()
@@ -275,7 +263,7 @@ def main(argv):
         for item in datas:
             newData.append(item)
         dem.putdata(newData)
-        dem.save("AD/images2/file"+str(idx*magnitude+3)+".tif", "TIFF")
+        dem.save(dem_dir_out+"file"+str(idx*magnitude+0)+".tif", "TIFF")
         # labels
         label = regTransform(img[2]) 
         datas = label.getdata()
@@ -283,8 +271,24 @@ def main(argv):
         for item in datas:
             newData.append(item)
         label.putdata(newData)
-        label.save("AD/labels/file"+str(idx*magnitude+3)+".tif","TIFF")
+        label.save(mask_dir_out + "file"+str(idx*magnitude+0)+".tif", "TIFF")
 
     return
+
+def get_args():
+    parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
+    parser.add_argument('--data-dir', dest='data_dir', type=os.Path, default="data/Image_Chips_128_overlap_unbalanced_dem/", help="Directory containing dataset")
+    parser.add_argument('--output-dir', dest='output_dir', type=os.Path, default="AD/", help="Directory to place augmented data in")
+    return parser.parse_args()
+
 if __name__ == "__main__":
-    main(sys.argv)
+    args = get_args()
+    if os.path.exists(args.output_dir)==False:
+        os.mkdir(args.output_dir)
+    if os.path.exists(os.path.join(args.output_dir, "images/"))==False:
+        os.mkdir(os.path.join(args.output_dir, "images/"))
+    if os.path.exists(os.path.join(args.output_dir, "images2/"))==False:
+        os.mkdir(os.path.join(args.output_dir, "images2/"))
+    if os.path.exists(os.path.join(args.output_dir, "labels/"))==False:
+        os.mkdir(os.path.join(args.output_dir, "labels/"))
+    main(args)
