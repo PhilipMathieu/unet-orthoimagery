@@ -24,6 +24,7 @@ from torchvision.io import read_image
 from random import random
 import argparse
 from tqdm.autonotebook import tqdm
+from shutil import copy2
 
 magnitude = 4
 
@@ -283,7 +284,12 @@ def main(data_dir: Path, output_dir: Path):
             newData.append(item)
         label.putdata(newData)
         label.save(mask_dir_out + "file"+str(idx*magnitude+3)+".tif", "TIFF")
-
+    
+    try:
+        copy2(os.path.join(data_dir, 'esri_accumulated_stats.json'), os.path.join(output_dir, 'esri_accumulated_stats.json'))
+    except:
+        print("Warning: Could not copy stats json.")
+    
     return
 
 def get_args():

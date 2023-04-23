@@ -93,6 +93,7 @@ class BasicDataset(Dataset):
         self.pos_weight = (self.stats["FeatureStats"]["NumImagesTotal"]*64*64) \
             / (self.stats["FeatureStats"]["NumFeaturesPerClass"] \
               * self.stats["FeatureStats"]["FeatureAreaPerClass"][0]["Mean"])
+        logging.info(f"Using pos_weight={self.pos_weight}")
 
     @staticmethod
     def preprocess(mask_values, pil_img, scale, is_mask, is_dem):
