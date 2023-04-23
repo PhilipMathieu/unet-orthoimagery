@@ -171,7 +171,7 @@ def main(data_dir: Path, output_dir: Path):
     random_crop_transform_loader = MyDataset(images_dir, dem_dir, mask_dir, randomCropTransformFunction)
 
     transform = transforms.ToPILImage('RGBA')
-    regTransform=transforms.ToPILImage()
+    regTransform=transforms.ToPILImage('I;16')
     #print(str(len(myTest_loader.dataset)))
     for idx, img in tqdm(enumerate(transform_loader), leave=False):
         # images
@@ -288,7 +288,7 @@ def main(data_dir: Path, output_dir: Path):
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
-    parser.add_argument('--data-dir', dest='data_dir', type=Path, default="data/Image_Chips_128_overlap_unbalanced_dem/", help="Directory containing dataset")
+    parser.add_argument('--data-dir', dest='data_dir', type=Path, default="data/Image_Chips_128_overlap_balanced_dem/", help="Directory containing dataset")
     parser.add_argument('--output-dir', dest='output_dir', type=Path, default="AD/", help="Directory to place augmented data in")
     return parser.parse_args()
 
