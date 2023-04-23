@@ -135,7 +135,7 @@ def train_model(
                     'step': global_step,
                     'epoch': epoch
                 })
-                pbar.set_postfix(f'BCE Loss: {loss.item()}, Dice Loss: {dloss.item()}')
+                pbar.set_postfix({'BCE': loss.item(), 'Dice Loss': dloss.item()})
 
                 # Evaluation round
                 division_step = (n_train // (5*batch_size)) # equivalent to floor(number of batches / 5)
