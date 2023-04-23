@@ -135,6 +135,7 @@ def train_model(
                     'step': global_step,
                     'epoch': epoch
                 })
+
                 pbar.set_postfix({'BCE': loss.item(), 'Dice Loss': dloss.item()})
 
                 # Evaluation round
