@@ -111,16 +111,16 @@ def train_model(
                     masks_pred = model(images)
                     if model.n_classes == 1:
                         loss = criterion(masks_pred.squeeze(1), true_masks.float())
-                        loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
+                        dloss = dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
                     else:
                         loss = criterion(masks_pred, dim=1).float()
-                        loss += dice_loss(
+                        dloss = dice_loss(
                             F.softmax(masks_pred, dim=1).float(),
                             F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
                             multiclass=True
                         )
                 optimizer.zero_grad(set_to_none=True)
-                grad_scaler.scale(loss).backward()
+                grad_scaler.scale(loss + dloss).backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clipping)
                 grad_scaler.step(optimizer)
                 grad_scaler.update()
@@ -129,11 +129,13 @@ def train_model(
                 global_step += 1
                 epoch_loss = loss.item()
                 experiment.log({
-                    'train loss': loss.item(),
+                    'BCE Loss': loss.item(),
+                    'Dice Loss': dloss.item(),
+                    'train loss': (loss + dloss).item(),
                     'step': global_step,
                     'epoch': epoch
                 })
-                pbar.set_postfix(**{'loss (batch)': loss.item()})
+                pbar.set_postfix(f'BCE Loss: {loss.item()}, Dice Loss: {dloss.item()}')
 
                 # Evaluation round
                 division_step = (n_train // (5*batch_size)) # equivalent to floor(number of batches / 5)
