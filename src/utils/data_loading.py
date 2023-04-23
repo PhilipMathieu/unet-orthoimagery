@@ -30,7 +30,7 @@ def load_image(filename):
         return Image.open(filename)
     
 def unique_mask_values(idx, mask_dir, mask_suffix):
-    mask_file = list(mask_dir.glob(idx + mask_suffix + '.tif'))[0]
+    mask_file = os.path.join(mask_dir, idx+".tif")
     mask = np.asarray(load_image(mask_file))
     if mask.ndim == 2:
         return np.unique(mask)
@@ -46,6 +46,7 @@ class BasicDataset(Dataset):
         self.dem_dir = Path(os.path.join(data_dir, "images2/"))
         self.mask_dir = Path(os.path.join(data_dir, "labels/"))
         self.pos_weight = 1.0
+
         
         try:
             with open(os.path.join(data_dir, 'esri_accumulated_stats.json'), 'r') as file:
@@ -92,6 +93,7 @@ class BasicDataset(Dataset):
         self.pos_weight = (self.stats["FeatureStats"]["NumImagesTotal"]*64*64) \
             / (self.stats["FeatureStats"]["NumFeaturesPerClass"] \
               * self.stats["FeatureStats"]["FeatureAreaPerClass"][0]["Mean"])
+        logging.info(f"Using pos_weight={self.pos_weight}")
 
     @staticmethod
     def preprocess(mask_values, pil_img, scale, is_mask, is_dem):
@@ -119,7 +121,7 @@ class BasicDataset(Dataset):
             if is_dem:
                 img = (img - np.min(img))
                 if np.max(img) > 0:
-                    img = img / (np.max(img) / 255)
+                    img = img / (np.max(img))
             else:
                 if (img > 1).any():
                     img = img / 255.0
@@ -164,10 +166,10 @@ class BasicDataset(Dataset):
         img = self.composite_bands(img, dem)
 
         return {
-            'image': torch.as_tensor(img.copy()).float().contiguous(),
-            'mask': torch.as_tensor(mask.copy()).long().contiguous()
+            'image': torch.as_tensor(img.copy(), dtype=torch.float32).contiguous(),
+            'mask': torch.as_tensor(mask.copy(), dtype=torch.bool).contiguous()
         }
 
 class MEOIDataset(BasicDataset):
     def __init__(self, data_dir, scale=1):
-        super().__init__(data_dir, scale, mask_suffix='_mask')
+        super().__init__(data_dir, scale, mask_suffix='')

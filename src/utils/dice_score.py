@@ -13,11 +13,11 @@ def dice_coeff(input:Tensor, target:Tensor, reduce_batch_first: bool = False, ep
 
     sum_dim = (-1, -2) if input.dim() == 2 or not reduce_batch_first else (-1,-2,-3)
 
-    inter = 2 * (input * target).sum(dim=sum_dim)
-    sets_sum = input.sum(dim=sum_dim) + target.sum(dim=sum_dim)
-    sets_sum = torch.where(sets_sum==0, inter, sets_sum)
-    dice = (inter + epsilon) / (sets_sum+epsilon)
-    return dice.mean()
+    inter = 2 * (input * target).sum(dim=sum_dim) # 2 * number of pixels in both input and target (i.e. intersection)
+    sets_sum = input.sum(dim=sum_dim) + target.sum(dim=sum_dim) # total number of pixels in both sets
+    sets_sum = torch.where(sets_sum==0, inter, sets_sum) # if that number is 0, change to inter to avoid exploding gradient
+    dice = (inter + epsilon) / (sets_sum+epsilon) # divide to get Dice coefficient
+    return dice.mean() # return the mean across the batch
 
 def multiclass_dice_coeff(input:Tensor, target:Tensor, reduce_batch_first:bool=False, epsilon:float=1e-6):
     # Average of Dice coefficient for all classes
