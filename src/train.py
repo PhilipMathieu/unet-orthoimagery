@@ -177,6 +177,7 @@ def train_model(
             state_dict['mask_values'] = dataset.mask_values
             torch.save(state_dict, str(f'{dir_checkpoint}checkpoint_epoch{epoch}.pth'))
             logging.info(f'Checkpoint {epoch} saved!')
+    return wandb.run.name   
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
