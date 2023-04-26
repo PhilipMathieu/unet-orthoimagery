@@ -1,6 +1,6 @@
 # https://github.com/milesial/Pytorch-UNet/blob/master/train.py
 # modified by: James Kim
-# date: Apr 11, 2023
+# date: Apr 25, 2023
 # References
 #   [1] "U-Net: Convolutional Networks for Biomedical Image Segmentation"
 #   [2] "Convolutional Neural Networks enable efficient, accurate and fine-grained segmentation of plant species and communities from high-resolution UAV imagery"
@@ -88,7 +88,7 @@ def train_model(
                                 lr=learning_rate, weight_decay=weight_decay, momentum=momentum, foreach=True)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5) # goal: maximize Dice score # not mentioned in [2], need to check [1]
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp) # Need to check
-    criterion = nn.CrossEntropyLoss() if model.n_classes > 1 else nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([dataset.pos_weight]).to(device))
+    criterion = nn.BCEWithLogitsLoss().to(device)
     global_step = 0
 
     # 5. Begin training
@@ -109,16 +109,8 @@ def train_model(
 
                 with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
                     masks_pred = model(images)
-                    if model.n_classes == 1:
-                        loss = criterion(masks_pred.squeeze(1), true_masks.float())
-                        dloss = dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
-                    else:
-                        loss = criterion(masks_pred, dim=1).float()
-                        dloss = dice_loss(
-                            F.softmax(masks_pred, dim=1).float(),
-                            F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
-                            multiclass=True
-                        )
+                    loss = criterion(masks_pred.squeeze(1), true_masks.float())
+                    dloss = dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
                 optimizer.zero_grad(set_to_none=True)
                 grad_scaler.scale(loss + dloss).backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clipping)
@@ -182,7 +174,7 @@ def train_model(
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
     parser.add_argument('--epochs', '-e', metavar='E', type=int, default=20, help='Number of epochs')
-    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=32, help='Batch size')
+    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=16, help='Batch size')
     parser.add_argument('--learning-rate', '-l', dest='lr', metavar='LR', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
     parser.add_argument('--scale', '-s', type=float, default=1.0, help='Downscaling factor of the images')
@@ -190,7 +182,7 @@ def get_args():
     parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=1, help='Number of classes')
-    parser.add_argument('--data-dir', dest='data_dir', type=Path, default="data/Image_Chips_128_overlap_unbalanced_dem/", help="Directory containing dataset")
+    parser.add_argument('--data-dir', dest='data_dir', type=Path, default="../data/Image_Chips_128_overlap_balanced_dem/", help="Directory containing dataset")
     parser.add_argument('--dir-checkpoint', dest='dir_checkpoint', type=Path, default='./checkpoints/', help="Directory in which to store PyTorch checkpoints")
     parser.add_argument('--debug', '-d', action='store_true', default=False, help='Use debugging mode (disable WandB uploads, etc.)')
     return parser.parse_args()
