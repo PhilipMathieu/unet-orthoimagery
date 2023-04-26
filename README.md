@@ -1,5 +1,17 @@
 # unet-orthoimagery
-## Requirements
+## Members
+  - Philip Englund Mathieu
+  - GunGyeom James Kim
+  - Hao Sheng Ning
+## Project Description
+  - 
+## URL for Presentation
+  - 
+## URL(s) for Others
+  - None
+
+## etc.
+### Requirements
 - torch
 - cv2
 - matplotlib: 3.6.2
@@ -8,7 +20,7 @@
 - tqdm: 4.64.1
 - wandb: 0.13.5
 
-## References
+### References
 - [milesial/Pytorch-UNet, Github](https://github.com/milesial/Pytorch-UNet)
 - [Sorensen-Dice coefficient, Wikipedia](https://en.wikipedia.org/wiki/S%C3%B8rensen%E2%80%93Dice_coefficient)
 - [RMSProp, Cornell Wiki](https://optimization.cbe.cornell.edu/index.php?title=RMSProp#:~:text=RMSProp%2C%20root%20mean%20square%20propagation,lecture%20six%20by%20Geoff%20Hinton.)
