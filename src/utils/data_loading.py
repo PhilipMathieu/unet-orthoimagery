@@ -130,8 +130,12 @@ class BasicDataset(Dataset):
     
     @staticmethod
     def composite_bands(img, dem):
-        return np.concatenate([img[0:3, :, :], dem], axis=0)
+        return np.concatenate([img[:3, :, :], dem], axis=0)
     
+    def get_filename(self, idx):
+        img_name = self.ids[idx]
+        img_file = list(self.images_dir.glob(img_name + '.tif'))
+        return img_file
     
     def __getitem__(self, idx):
         img_name = self.ids[idx]
