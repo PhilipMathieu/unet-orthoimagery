@@ -1,8 +1,0 @@
-images = 6241 *4*64*64
-
-Class feature statistics:
-features = 33
-features per image = [min = 1, mean = 1.00, max = 1]
-classes = 1
-cls name                                  cls value     images   features    min size   mean size    max size
-255                                             255         33         33        0.07       13.97       23.04
