@@ -1,8 +1,6 @@
 # https://github.com/milesial/Pytorch-UNet/blob/master/utils/utils.py
 # modified by: James Kim
-# date: Apr 11, 2023
-""" This file might not be necessary """
-""" Need to check """
+# date: Apr 26, 2023
 import matplotlib.pyplot as plt
 
 def plot_img_and_mask(img, mask):
