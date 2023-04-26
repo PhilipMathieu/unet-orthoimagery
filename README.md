@@ -4,7 +4,7 @@
   - GunGyeom James Kim
   - Hao Sheng Ning
 ## Project Description
-  - 
+  - This project demonstrates a method for segmenting aerial imagery using the U-Net CNN to detect the presence of Fallopia japonica (Japanese knotweed), a plant species that is categorized as invasive in Maine. The project is based on a paper that achieved a similar goal using unmanned aerial vehicle (UAV, i.e. drone) imagery to detect different plant species in a different region of the US. This project utilizes ortho-rectified aerial imagery obtained from the Maine GeoLibrary which is freely available. If successful, the proposed solution will enable early detection, mapping, and monitoring of invasive plants in Maine, thereby improving the state's ecological, social, and economic conditions.
 ## URL for Presentation
   - 
 ## URL(s) for Others
