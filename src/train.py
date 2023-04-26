@@ -1,6 +1,6 @@
 # https://github.com/milesial/Pytorch-UNet/blob/master/train.py
 # modified by: James Kim
-# date: Apr 11, 2023
+# date: Apr 26, 2023
 # References
 #   [1] "U-Net: Convolutional Networks for Biomedical Image Segmentation"
 #   [2] "Convolutional Neural Networks enable efficient, accurate and fine-grained segmentation of plant species and communities from high-resolution UAV imagery"
