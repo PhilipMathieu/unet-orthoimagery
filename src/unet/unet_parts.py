@@ -1,6 +1,6 @@
 # https://github.com/milesial/Pytorch-UNet/blob/67bf11b4db4c5f2891bd7e8e7f58bcde8ee2d2db/unet/unet_parts.py
 # modified by: James Kim
-# date: Apr 10, 2023
+# date: Apr 26, 2023
 # References
 #   [1] "U-Net: Convolutional Networks for Biomedical Image Segmentation"
 """ Parts of the U-Net model"""
@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class DoubleConv(nn.Module):
-    """(convolution => [BN] => ReLU) * 2"""
+    """(convolution => [Batch Normal] => ReLU) * 2"""
 
     def __init__(self, in_channels, out_channels, mid_channels=None):
         super().__init__()
@@ -19,10 +19,10 @@ class DoubleConv(nn.Module):
         self.double_conv = nn.Sequential(
             nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(mid_channels), # not mentioned in [1]
-            nn.ReLU(inplace=True), # Not sure what inplace does, even after reading documentation
+            nn.ReLU(inplace=True), 
             nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1),
-            nn.BatchNorm2d(out_channels), # not mentioned in [1]
-            nn.ReLU(inplace=True) # Not sure what inplace does, even after reading documentation
+            nn.BatchNorm2d(out_channels), 
+            nn.ReLU(inplace=True)
         )
     
     def forward(self, x):
