@@ -1,9 +1,10 @@
 # https://github.com/milesial/Pytorch-UNet/blob/67bf11b4db4c5f2891bd7e8e7f58bcde8ee2d2db/unet/unet_parts.py
-# modified by: James Kim
-# date: Apr 26, 2023
-# References
-#   [1] "U-Net: Convolutional Networks for Biomedical Image Segmentation"
+# modified by: James Kim, Philip Mathieu
 """ Parts of the U-Net model"""
+# DoubleConv: (convolution => [Batch Normal] => ReLU) * 2
+# Down: Downscaling with maxpool than double conv
+# Up: Upscaling then double conv
+# OutConv: Single convolution
 
 import torch
 import torch.nn as nn
@@ -70,6 +71,7 @@ class Up(nn.Module):
         return self.conv(x)
     
 class OutConv(nn.Module):
+    """Single convolution"""
     def __init__(self, in_channels, out_channels):
         super(OutConv, self).__init__()
         self.conv = nn.Conv2d(in_channels,out_channels, kernel_size = 1)
