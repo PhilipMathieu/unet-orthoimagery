@@ -1,6 +1,5 @@
 # https://github.com/milesial/Pytorch-UNet/blob/master/utils/utils.py
-# modified by: James Kim
-# date: Apr 11, 2023
+# modified by: James Kim, Philip Mathieu
 """ ..., the dice-coefficient was chosen as loss function"""
 
 import torch
