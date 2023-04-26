@@ -1,15 +1,17 @@
 # https://github.com/milesial/Pytorch-UNet/blob/master/unet/unet_model.py
-# modified by: James Kim
-# date: Apr 10, 2023
-# References
-#   [1] "U-Net: Convolutional Networks for Biomedical Image Segmentation"
-
-# n_classes = 1 or 2
-
+# modified by: James Kim, Philip Mathieu
+# unet_model.py
+# Assemble parts together
 from .unet_parts import *
 
+# Model to finetune
+# inherit nn.Module from PyTorch
 class UNet(nn.Module):
-    def __init__(self, n_channels, n_classes, bilinear=False):
+    # constructor
+    # n_channels: 4 for our problem [RGB/DEM | RGB/NIR]
+    # n_classes: 1 for our problem. If there is Fallopia Japonica then 1 else 0
+    # bilinear: False for our problem
+    def __init__(self, n_channels, n_classes, bilinear=False) -> None:
         super(UNet, self).__init__()
         self.n_channels = n_channels
         self.n_classes = n_classes
@@ -27,19 +29,23 @@ class UNet(nn.Module):
         self.up4 = (Up(128, 64//factor, bilinear))
         self.outc = (OutConv(64, n_classes))
 
+    # leanring process
+    # x: Tensor, image input
+    # logits: Tensor
     def forward(self, x):
         x1 = self.inc(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)
         x4 = self.down3(x3)
         x5 = self.down4(x4)
-        x = self.up1(x5, x4)
+        x = self.up1(x5, x4) # concatenating in upsampling
         x = self.up2(x, x3)
         x = self.up3(x,x2)
         x = self.up4(x,x1)
         logits = self.outc(x)
         return logits
 
+    # To save model parameters at checkpoint
     def use_checkpointing(self):
         self.inc = torch.utils.checkpoint(self.inc)
         self.down1 = torch.utils.checkpoint(self.down1)
