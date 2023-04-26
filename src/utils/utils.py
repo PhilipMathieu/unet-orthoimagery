@@ -1,8 +1,9 @@
 # https://github.com/milesial/Pytorch-UNet/blob/master/utils/utils.py
-# modified by: James Kim
-# date: Apr 26, 2023
+# modified by: James Kim, Philip Mathieu
+# To plot for multiple classes, Not used in our case
 import matplotlib.pyplot as plt
 
+# To plot for multiple classes, Not used in our case
 def plot_img_and_mask(img, mask):
     classes = mask.max() + 1 
     fig, ax = plt.subplots(1, classes + 1)
