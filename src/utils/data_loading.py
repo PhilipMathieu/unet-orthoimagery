@@ -1,6 +1,6 @@
 # https://github.com/milesial/Pytorch-UNet/blob/master/utils/data_loading.py
-# modified by: James Kim
-# date: Apr 14, 2023
+# modified by: James Kim, Philip Mathieu
+# Configure Dataset for our use
 
 import logging
 import os
@@ -18,6 +18,7 @@ from torch.utils.data import Dataset
 from tqdm.autonotebook import tqdm
 import json
 
+# load image based on its extension
 def load_image(filename):
     ext = splitext(filename)[1]
     if ext == '.tif':
@@ -28,7 +29,8 @@ def load_image(filename):
         return Image.fromarray(torch.load(filename).numpy())
     else:
         return Image.open(filename)
-    
+
+# return unique mask values from every mask
 def unique_mask_values(idx, mask_dir, mask_suffix):
     mask_file = os.path.join(mask_dir, idx+".tif")
     mask = np.asarray(load_image(mask_file))
@@ -39,7 +41,8 @@ def unique_mask_values(idx, mask_dir, mask_suffix):
         return np.unique(mask, axis=0)
     else:
         raise ValueError(f'Loaded masks should have 2 or 3 dimensions, found {mask.ndim}')
-    
+
+# Dataset for our use  
 class BasicDataset(Dataset):
     def __init__(self, data_dir: str, scale: float = 1.0, mask_suffix: str= ''):
         self.images_dir = Path(os.path.join(data_dir, "images/"))
@@ -47,7 +50,7 @@ class BasicDataset(Dataset):
         self.mask_dir = Path(os.path.join(data_dir, "labels/"))
         self.pos_weight = 1.0
 
-        
+        # loading stat to be used in calculating pos_weight
         try:
             with open(os.path.join(data_dir, 'esri_accumulated_stats.json'), 'r') as file:
                 self.stats = json.load(file)
@@ -85,16 +88,19 @@ class BasicDataset(Dataset):
         
         self.mask_values = list(sorted(np.unique(np.concatenate(unique), axis=0).tolist()))
         logging.info(f'Unique mask values: {self.mask_values}')
-
+ 
     def __len__(self):
         return len(self.ids)
     
+    # calculate pos_weight
     def _process_stats(self):
         self.pos_weight = (self.stats["FeatureStats"]["NumImagesTotal"]*64*64) \
             / (self.stats["FeatureStats"]["NumFeaturesPerClass"] \
               * self.stats["FeatureStats"]["FeatureAreaPerClass"][0]["Mean"])
         logging.info(f"Using pos_weight={self.pos_weight}")
-
+    # scale images(img, dem, mask)
+    # img and dem files value will be normalized in [0,1]
+    # mask will have either 1 or 0
     @staticmethod
     def preprocess(mask_values, pil_img, scale, is_mask, is_dem):
         w, h = pil_img.size
@@ -128,6 +134,7 @@ class BasicDataset(Dataset):
             
             return img
     
+    # Get rid of NIR and concatenate DEM to image
     @staticmethod
     def composite_bands(img, dem):
         return np.concatenate([img[:3, :, :], dem], axis=0)
