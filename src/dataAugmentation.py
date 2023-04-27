@@ -183,6 +183,7 @@ def main(data_dir: Path, output_dir: Path):
         for item in datas:
             newData.append(item)
         rgba.putdata(newData)
+        # save the image to path
         rgba.save(images_dir_out + "file"+str(idx*magnitude+0)+".tif", "TIFF")
         # dem
         dem = regTransform(img[1])
@@ -191,6 +192,7 @@ def main(data_dir: Path, output_dir: Path):
         for item in datas:
             newData.append(item)
         dem.putdata(newData)
+        # save the image to path
         dem.save(dem_dir_out+"file"+str(idx*magnitude+0)+".tif", "TIFF")
         # labels
         label = regTransform(img[2]) 
@@ -199,6 +201,7 @@ def main(data_dir: Path, output_dir: Path):
         for item in datas:
             newData.append(item)
         label.putdata(newData)
+        # save the image to path
         label.save(mask_dir_out + "file"+str(idx*magnitude+0)+".tif", "TIFF")
 
     for idx, img in tqdm(enumerate(horizontal_transform_loader), leave=False):
@@ -211,6 +214,7 @@ def main(data_dir: Path, output_dir: Path):
         for item in datas:
             newData.append(item)
         rgba.putdata(newData)
+        # save the image to path
         rgba.save(images_dir_out + "file"+str(idx*magnitude+1)+".tif", "TIFF")
         # dem
         dem = regTransform(img[1])
@@ -219,6 +223,7 @@ def main(data_dir: Path, output_dir: Path):
         for item in datas:
             newData.append(item)
         dem.putdata(newData)
+        # save the image to path
         dem.save(dem_dir_out+"file"+str(idx*magnitude+1)+".tif", "TIFF")
         # label
         label = regTransform(img[2]) 
@@ -227,6 +232,7 @@ def main(data_dir: Path, output_dir: Path):
         for item in datas:
             newData.append(item)
         label.putdata(newData)
+        # save the image to path
         label.save(mask_dir_out + "file"+str(idx*magnitude+1)+".tif", "TIFF")
 
     for idx, img in tqdm(enumerate(vertical_transform_loader), leave=False):
@@ -239,6 +245,7 @@ def main(data_dir: Path, output_dir: Path):
         for item in datas:
             newData.append(item)
         rgba.putdata(newData)
+        # save the image to path
         rgba.save(images_dir_out + "file"+str(idx*magnitude+2)+".tif", "TIFF")
         # dem
         dem = regTransform(img[1])
@@ -247,6 +254,7 @@ def main(data_dir: Path, output_dir: Path):
         for item in datas:
             newData.append(item)
         dem.putdata(newData)
+        # save the image to path
         dem.save(dem_dir_out+"file"+str(idx*magnitude+2)+".tif", "TIFF")
         # labels
         label = regTransform(img[2]) 
@@ -255,6 +263,7 @@ def main(data_dir: Path, output_dir: Path):
         for item in datas:
             newData.append(item)
         label.putdata(newData)
+        # save the image to path
         label.save(mask_dir_out + "file"+str(idx*magnitude+2)+".tif", "TIFF")
     
     for idx, img in tqdm(enumerate(random_crop_transform_loader), False):
@@ -267,6 +276,7 @@ def main(data_dir: Path, output_dir: Path):
         for item in datas:
             newData.append(item)
         rgba.putdata(newData)
+        # save the image to path
         rgba.save(images_dir_out + "file"+str(idx*magnitude+3)+".tif", "TIFF")
         # DEM
         dem = regTransform(img[1])
@@ -275,6 +285,7 @@ def main(data_dir: Path, output_dir: Path):
         for item in datas:
             newData.append(item)
         dem.putdata(newData)
+        # save the image to path
         dem.save(dem_dir_out+"file"+str(idx*magnitude+3)+".tif", "TIFF")
         # labels
         label = regTransform(img[2]) 
@@ -283,6 +294,7 @@ def main(data_dir: Path, output_dir: Path):
         for item in datas:
             newData.append(item)
         label.putdata(newData)
+        # save the image to path
         label.save(mask_dir_out + "file"+str(idx*magnitude+3)+".tif", "TIFF")
     
     try:
@@ -293,6 +305,7 @@ def main(data_dir: Path, output_dir: Path):
     return
 
 def get_args():
+    # get parameters from outside
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
     parser.add_argument('--data-dir', dest='data_dir', type=Path, default="data/Image_Chips_128_overlap_balanced_dem/", help="Directory containing dataset")
     parser.add_argument('--output-dir', dest='output_dir', type=Path, default="AD/", help="Directory to place augmented data in")
