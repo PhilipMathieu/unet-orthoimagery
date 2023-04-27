@@ -1,5 +1,5 @@
 # https://github.com/milesial/Pytorch-UNet/blob/master/train.py
-# modified by: James Kim
+# modified by: James Kim, Philip Mathieu
 # date: Apr 26, 2023
 # References
 #   [1] "U-Net: Convolutional Networks for Biomedical Image Segmentation"
@@ -8,15 +8,11 @@
 import argparse
 import logging
 import os
-import random
-import sys
 from pathlib import Path
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision.transforms as T
-import torchvision.transforms.functional as TF
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 
@@ -28,6 +24,7 @@ from unet.unet_model import UNet
 from utils.dice_score import dice_loss
 from utils.data_loading import MEOIDataset, BasicDataset
 
+# primary training function
 def train_model(
         model,
         device,
@@ -97,17 +94,20 @@ def train_model(
         epoch_loss = 0 
         with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img') as pbar:
             for batch in train_loader:
+                # retrieve images and masks from the batch
                 images, true_masks = batch['image'], batch['mask']
 
                 assert images.shape[1] == model.n_channels, \
                     f'Network has been defined with {model.n_channels} input channels, '\
                     f'but loaded images have {images.shape[1]} channels. Please check that '\
                     'the images are loaded correctly.'
-            
+                
+                # transfer images and masks to GPU memory (or other device)
                 images = images.to(device=device, dtype=torch.float32, memory_format=torch.channels_last)
                 true_masks = true_masks.to(device=device, dtype=torch.long)
 
                 with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
+                    # predict for each image, using the appropriate loss function
                     masks_pred = model(images)
                     if model.n_classes == 1:
                         loss = criterion(masks_pred.squeeze(1), true_masks.float())
@@ -119,15 +119,18 @@ def train_model(
                             F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
                             multiclass=True
                         )
+                
+                # scale and back propagate
                 optimizer.zero_grad(set_to_none=True)
                 grad_scaler.scale(loss + dloss).backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clipping)
                 grad_scaler.step(optimizer)
                 grad_scaler.update()
 
+                # increment step and log to WandB
                 pbar.update(images.shape[0])
                 global_step += 1
-                epoch_loss = loss.item()
+                epoch_loss += loss.item()
                 experiment.log({
                     'BCE Loss': loss.item(),
                     'Dice Loss': dloss.item(),
@@ -136,12 +139,15 @@ def train_model(
                     'epoch': epoch
                 })
 
+                # update the tqdm progress bar
                 pbar.set_postfix({'BCE': loss.item(), 'Dice Loss': dloss.item()})
 
                 # Evaluation round
                 division_step = (n_train // (5*batch_size)) # equivalent to floor(number of batches / 5)
-                if division_step > 0: # starting after 1/5 of the batches
-                    if global_step % division_step == 0: # run validation when global step is multiple of 1/5 number of batches
+                if division_step > 0:
+                    # starting after 1/5 of the batches
+                    # run validation when global step is multiple of 1/5 number of batches
+                    if global_step % division_step == 0:
                         histograms = {}
                         for tag, value in model.named_parameters():
                             tag = tag.replace('/', '.')
@@ -150,11 +156,12 @@ def train_model(
                             if not (torch.isinf(value.grad) | torch.isnan(value.grad)).any():
                                 histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
                         
+                        # use the evaluation script from evaluate.py
                         val_score = evaluate(model, val_loader, device, amp)
                         scheduler.step(val_score)
 
+                        # log validation results and example masks to WandB
                         logging.info('Validation Dice score: {}'.format(val_score))
-
                         try:
                             experiment.log({
                                 'learning rate': optimizer.param_groups[0]['lr'],
@@ -171,6 +178,8 @@ def train_model(
                         except Exception as e:
                             logging.warn(e)
                             pass
+        
+        # save checkpoint file
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
             state_dict = model.state_dict()
@@ -178,25 +187,8 @@ def train_model(
             torch.save(state_dict, str(f'{dir_checkpoint}checkpoint_epoch{epoch}.pth'))
             logging.info(f'Checkpoint {epoch} saved!')
 
-def get_args():
-    parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
-    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=20, help='Number of epochs')
-    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=32, help='Batch size')
-    parser.add_argument('--learning-rate', '-l', dest='lr', metavar='LR', type=float, default=1e-4, help='Learning rate')
-    parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
-    parser.add_argument('--scale', '-s', type=float, default=1.0, help='Downscaling factor of the images')
-    parser.add_argument('--validation', '-v', dest='val', type=float, default=33.3, help='Percent of the data that is used as validation (0-100)')
-    parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
-    parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
-    parser.add_argument('--classes', '-c', type=int, default=1, help='Number of classes')
-    parser.add_argument('--data-dir', dest='data_dir', type=Path, default="data/Image_Chips_128_overlap_unbalanced_dem/", help="Directory containing dataset")
-    parser.add_argument('--dir-checkpoint', dest='dir_checkpoint', type=Path, default='./checkpoints/', help="Directory in which to store PyTorch checkpoints")
-    parser.add_argument('--debug', '-d', action='store_true', default=False, help='Use debugging mode (disable WandB uploads, etc.)')
-    return parser.parse_args()
-
-if __name__ == "__main__":
-    args = get_args()
-
+# main function including model device detection, model instantiation, and calls to the train function
+def main(args):
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device: {device}')
@@ -251,3 +243,25 @@ if __name__ == "__main__":
             dir_checkpoint=args.dir_checkpoint,
             debug=args.debug
         )
+
+# create command line arguments
+def get_args():
+    parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
+    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=20, help='Number of epochs')
+    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=32, help='Batch size')
+    parser.add_argument('--learning-rate', '-l', dest='lr', metavar='LR', type=float, default=1e-4, help='Learning rate')
+    parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
+    parser.add_argument('--scale', '-s', type=float, default=1.0, help='Downscaling factor of the images')
+    parser.add_argument('--validation', '-v', dest='val', type=float, default=33.3, help='Percent of the data that is used as validation (0-100)')
+    parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
+    parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
+    parser.add_argument('--classes', '-c', type=int, default=1, help='Number of classes')
+    parser.add_argument('--data-dir', dest='data_dir', type=Path, default="data/Image_Chips_128_overlap_unbalanced_dem/", help="Directory containing dataset")
+    parser.add_argument('--dir-checkpoint', dest='dir_checkpoint', type=Path, default='./checkpoints/', help="Directory in which to store PyTorch checkpoints")
+    parser.add_argument('--debug', '-d', action='store_true', default=False, help='Use debugging mode (disable WandB uploads, etc.)')
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = get_args()
+    main(args)
+
