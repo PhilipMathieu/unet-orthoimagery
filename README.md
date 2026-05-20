@@ -9,7 +9,10 @@
   - https://www.youtube.com/watch?v=7JHhMM3SsUo
 
 ## URL for Interactive Web Map
-  - https://pmathieu.maps.arcgis.com/apps/instant/imageryviewer/index.html?appid=1d0485855e0a4505a2ed2f4620767c9b&locale=en
+  - https://philipmathieu.github.io/unet-orthoimagery/map/ (FOSS web map – MapLibre GL JS, OpenStreetMap basemap)
+  - ~~https://pmathieu.maps.arcgis.com/apps/instant/imageryviewer/index.html?appid=1d0485855e0a4505a2ed2f4620767c9b&locale=en~~ (ArcGIS account defunct)
+
+  To serve the map locally: `python3 -m http.server 8000 --directory map/`
 ## etc.
 ### Requirements
 - torch

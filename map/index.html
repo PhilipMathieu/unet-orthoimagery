@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Japanese Knotweed Detection – U-Net Orthoimagery</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background: #1a1a2e;
+      color: #e0e0e0;
+    }
+
+    header {
+      padding: 10px 16px;
+      background: #16213e;
+      border-bottom: 1px solid #0f3460;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e0e0e0;
+    }
+
+    header p {
+      font-size: 0.75rem;
+      color: #9e9e9e;
+    }
+
+    #map { flex: 1; }
+
+    #controls {
+      position: absolute;
+      top: 70px;
+      right: 10px;
+      background: rgba(22, 33, 62, 0.95);
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 14px 16px;
+      z-index: 10;
+      min-width: 230px;
+      backdrop-filter: blur(4px);
+    }
+
+    #controls h2 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #9e9e9e;
+      margin-bottom: 10px;
+    }
+
+    .layer-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .layer-row label {
+      font-size: 0.85rem;
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .toggle {
+      width: 34px;
+      height: 18px;
+      background: #444;
+      border-radius: 9px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    .toggle.on { background: #4caf50; }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: left 0.2s;
+    }
+    .toggle.on::after { left: 18px; }
+
+    .opacity-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #0f3460;
+    }
+    .opacity-row label { font-size: 0.8rem; color: #9e9e9e; }
+    .opacity-row input[type=range] { flex: 1; }
+
+    #legend {
+      position: absolute;
+      bottom: 30px;
+      left: 10px;
+      background: rgba(22, 33, 62, 0.92);
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 10px 14px;
+      z-index: 10;
+      font-size: 0.78rem;
+      backdrop-filter: blur(4px);
+    }
+    #legend h3 { font-size: 0.75rem; font-weight: 600; color: #9e9e9e; text-transform: uppercase; margin-bottom: 6px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .legend-box { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+
+    #info {
+      position: absolute;
+      bottom: 30px;
+      right: 10px;
+      background: rgba(22, 33, 62, 0.92);
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 10px 14px;
+      z-index: 10;
+      font-size: 0.78rem;
+      max-width: 220px;
+      backdrop-filter: blur(4px);
+    }
+    #info h3 { font-size: 0.75rem; font-weight: 600; color: #9e9e9e; text-transform: uppercase; margin-bottom: 4px; }
+    #info p { color: #bdbdbd; line-height: 1.5; }
+    #info a { color: #64b5f6; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Japanese Knotweed Detection – U-Net Orthoimagery (Maine, 2021)</h1>
+    <p>U-Net CNN segmentation of <em>Fallopia japonica</em> in 7.5 cm/px aerial imagery &nbsp;|&nbsp; 70°13'W, 43°34'N</p>
+  </div>
+</header>
+
+<div id="map"></div>
+
+<div id="controls">
+  <h2>Layers</h2>
+
+  <div class="opacity-row">
+    <label for="aerialOpacity">Aerial opacity</label>
+    <input type="range" id="aerialOpacity" min="0" max="1" step="0.05" value="1" />
+  </div>
+
+  <div class="layer-row">
+    <div class="swatch" style="background:#ff0000; opacity:0.6;"></div>
+    <label for="toggle-gt">Ground truth (invasives)</label>
+    <div id="toggle-gt" class="toggle on" data-layer="ground-truth-fill"></div>
+  </div>
+
+  <div class="layer-row">
+    <div class="swatch" style="background:#ff9800; opacity:0.6;"></div>
+    <label for="toggle-126">Prediction – model 126</label>
+    <div id="toggle-126" class="toggle on" data-layer="pred-126-fill"></div>
+  </div>
+
+  <div class="layer-row">
+    <div class="swatch" style="background:#ffeb3b; opacity:0.6;"></div>
+    <label for="toggle-127">Prediction – model 127</label>
+    <div id="toggle-127" class="toggle on" data-layer="pred-127-fill"></div>
+  </div>
+
+  <div class="layer-row">
+    <div class="swatch" style="background:#4caf50; opacity:0.6;"></div>
+    <label for="toggle-93">Prediction – model 93</label>
+    <div id="toggle-93" class="toggle on" data-layer="pred-93-fill"></div>
+  </div>
+</div>
+
+<div id="legend">
+  <h3>Legend</h3>
+  <div class="legend-item"><div class="legend-box" style="background:#ff0000; opacity:0.7;"></div> Ground truth</div>
+  <div class="legend-item"><div class="legend-box" style="background:#ff9800; opacity:0.7;"></div> Prediction (model 126)</div>
+  <div class="legend-item"><div class="legend-box" style="background:#ffeb3b; opacity:0.7;"></div> Prediction (model 127)</div>
+  <div class="legend-item"><div class="legend-box" style="background:#4caf50; opacity:0.7;"></div> Prediction (model 93)</div>
+</div>
+
+<div id="info">
+  <h3>About</h3>
+  <p>
+    U-Net segmentation of <em>Fallopia japonica</em> (Japanese knotweed) in
+    ortho-rectified 7.5 cm/px aerial imagery from the
+    <a href="https://www.maine.gov/geolib/" target="_blank">Maine GeoLibrary</a>, 2021.
+    Predictions from three model checkpoints are overlaid on the aerial image.
+    <br/><br/>
+    <a href="https://github.com/PhilipMathieu/unet-orthoimagery" target="_blank">Source on GitHub</a>
+    &nbsp;|&nbsp;
+    <a href="https://www.youtube.com/watch?v=7JHhMM3SsUo" target="_blank">Presentation</a>
+  </p>
+</div>
+
+<script>
+  const map = new maplibregl.Map({
+    container: 'map',
+    style: {
+      version: 8,
+      sources: {
+        osm: {
+          type: 'raster',
+          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }
+      },
+      layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+    },
+    center: [-70.2188516, 43.5621436],
+    zoom: 15,
+    maxZoom: 20
+  });
+
+  map.addControl(new maplibregl.NavigationControl(), 'top-left');
+  map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+
+  // Image corners: top-left, top-right, bottom-right, bottom-left
+  const aerialBounds = [
+    [-70.2195925, 43.5635340],
+    [-70.2181106, 43.5635340],
+    [-70.2181106, 43.5607531],
+    [-70.2195925, 43.5607531]
+  ];
+
+  map.on('load', () => {
+    // Aerial imagery overlay
+    map.addSource('aerial', {
+      type: 'image',
+      url: 'aerial.jpg',
+      coordinates: aerialBounds
+    });
+    map.addLayer({ id: 'aerial-layer', type: 'raster', source: 'aerial', paint: { 'raster-opacity': 1 } });
+
+    // GeoJSON mask layers
+    const layers = [
+      { id: 'ground-truth', file: 'ground_truth.geojson', color: '#ff0000' },
+      { id: 'pred-126',     file: 'prediction_126.geojson', color: '#ff9800' },
+      { id: 'pred-127',     file: 'prediction_127.geojson', color: '#ffeb3b' },
+      { id: 'pred-93',      file: 'prediction_93.geojson',  color: '#4caf50' }
+    ];
+
+    layers.forEach(({ id, file, color }) => {
+      map.addSource(id, { type: 'geojson', data: file });
+      map.addLayer({
+        id: `${id}-fill`,
+        type: 'fill',
+        source: id,
+        paint: { 'fill-color': color, 'fill-opacity': 0.45 }
+      });
+      map.addLayer({
+        id: `${id}-outline`,
+        type: 'line',
+        source: id,
+        paint: { 'line-color': color, 'line-width': 1, 'line-opacity': 0.8 }
+      });
+    });
+  });
+
+  // Aerial opacity slider
+  document.getElementById('aerialOpacity').addEventListener('input', e => {
+    map.setPaintProperty('aerial-layer', 'raster-opacity', parseFloat(e.target.value));
+  });
+
+  // Layer toggles
+  document.querySelectorAll('.toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const layerId = btn.dataset.layer;
+      const outlineId = layerId.replace('-fill', '-outline');
+      const isOn = btn.classList.toggle('on');
+      const vis = isOn ? 'visible' : 'none';
+      if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', vis);
+      if (map.getLayer(outlineId)) map.setLayoutProperty(outlineId, 'visibility', vis);
+    });
+  });
+</script>
+
+</body>
+</html>
