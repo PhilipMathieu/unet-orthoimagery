@@ -11,74 +11,69 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      display: flex;
-      flex-direction: column;
       height: 100vh;
       background: #1a1a2e;
       color: #e0e0e0;
     }
 
-    header {
-      padding: 10px 16px;
-      background: #16213e;
-      border-bottom: 1px solid #0f3460;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-shrink: 0;
-    }
+    #map { width: 100%; height: 100%; }
 
-    header h1 {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #e0e0e0;
-    }
-
-    header p {
-      font-size: 0.75rem;
-      color: #9e9e9e;
-    }
-
-    #map { flex: 1; }
-
-    #controls {
-      position: absolute;
-      top: 70px;
-      right: 10px;
+    /* Shared panel style for both IControls */
+    .ctrl-panel {
       background: rgba(22, 33, 62, 0.95);
       border: 1px solid #0f3460;
       border-radius: 8px;
-      padding: 14px 16px;
-      z-index: 10;
-      min-width: 230px;
+      font-size: 0.82rem;
+      color: #e0e0e0;
       backdrop-filter: blur(4px);
+      min-width: 220px;
+      max-width: 260px;
+      overflow: hidden;
     }
 
-    #controls h2 {
-      font-size: 0.8rem;
+    .ctrl-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid #0f3460;
+    }
+    .ctrl-panel-header:hover { background: rgba(255,255,255,0.04); }
+
+    .ctrl-panel-title {
+      font-size: 0.75rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: #9e9e9e;
-      margin-bottom: 10px;
     }
 
+    .ctrl-panel-chevron {
+      font-size: 0.65rem;
+      color: #9e9e9e;
+      transition: transform 0.2s;
+      line-height: 1;
+    }
+    .ctrl-panel.collapsed .ctrl-panel-chevron { transform: rotate(180deg); }
+    .ctrl-panel.collapsed .ctrl-panel-body { display: none; }
+
+    .ctrl-panel-body { padding: 12px 14px; }
+
+    /* Layers control */
     .layer-row {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 9px;
       margin-bottom: 8px;
     }
-
-    .layer-row label {
-      font-size: 0.85rem;
-      cursor: pointer;
-      flex: 1;
-    }
+    .layer-row:last-child { margin-bottom: 0; }
+    .layer-row label { font-size: 0.84rem; cursor: pointer; flex: 1; }
 
     .swatch {
-      width: 14px;
-      height: 14px;
+      width: 13px;
+      height: 13px;
       border-radius: 3px;
       flex-shrink: 0;
     }
@@ -93,7 +88,6 @@
       transition: background 0.2s;
       flex-shrink: 0;
     }
-
     .toggle.on { background: #4caf50; }
     .toggle::after {
       content: '';
@@ -116,110 +110,92 @@
       padding-bottom: 10px;
       border-bottom: 1px solid #0f3460;
     }
-    .opacity-row label { font-size: 0.8rem; color: #9e9e9e; }
-    .opacity-row input[type=range] { flex: 1; }
+    .opacity-row label { font-size: 0.78rem; color: #9e9e9e; white-space: nowrap; }
+    .opacity-row input[type=range] { flex: 1; min-width: 0; }
 
-    #legend {
-      position: absolute;
-      bottom: 30px;
-      left: 10px;
-      background: rgba(22, 33, 62, 0.92);
-      border: 1px solid #0f3460;
-      border-radius: 8px;
-      padding: 10px 14px;
-      z-index: 10;
-      font-size: 0.78rem;
-      backdrop-filter: blur(4px);
-    }
-    #legend h3 { font-size: 0.75rem; font-weight: 600; color: #9e9e9e; text-transform: uppercase; margin-bottom: 6px; }
-    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-    .legend-box { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
-
-    #info {
-      position: absolute;
-      bottom: 30px;
-      right: 10px;
-      background: rgba(22, 33, 62, 0.92);
-      border: 1px solid #0f3460;
-      border-radius: 8px;
-      padding: 10px 14px;
-      z-index: 10;
-      font-size: 0.78rem;
-      max-width: 220px;
-      backdrop-filter: blur(4px);
-    }
-    #info h3 { font-size: 0.75rem; font-weight: 600; color: #9e9e9e; text-transform: uppercase; margin-bottom: 4px; }
-    #info p { color: #bdbdbd; line-height: 1.5; }
-    #info a { color: #64b5f6; }
+    /* Info control */
+    .info-body { color: #bdbdbd; line-height: 1.55; }
+    .info-body a { color: #64b5f6; }
+    .info-body em { font-style: italic; }
   </style>
 </head>
 <body>
 
-<header>
-  <div>
-    <h1>Japanese Knotweed Detection – U-Net Orthoimagery (Maine, 2021)</h1>
-    <p>U-Net CNN segmentation of <em>Fallopia japonica</em> in 7.5 cm/px aerial imagery &nbsp;|&nbsp; 70°13'W, 43°34'N</p>
-  </div>
-</header>
-
 <div id="map"></div>
 
-<div id="controls">
-  <h2>Layers</h2>
-
-  <div class="opacity-row">
-    <label for="aerialOpacity">Aerial opacity</label>
-    <input type="range" id="aerialOpacity" min="0" max="1" step="0.05" value="1" />
-  </div>
-
-  <div class="layer-row">
-    <div class="swatch" style="background:#ff0000; opacity:0.6;"></div>
-    <label for="toggle-gt">Ground truth (invasives)</label>
-    <div id="toggle-gt" class="toggle on" data-layer="ground-truth-fill"></div>
-  </div>
-
-  <div class="layer-row">
-    <div class="swatch" style="background:#ff9800; opacity:0.6;"></div>
-    <label for="toggle-126">Prediction – model 126</label>
-    <div id="toggle-126" class="toggle on" data-layer="pred-126-fill"></div>
-  </div>
-
-  <div class="layer-row">
-    <div class="swatch" style="background:#ffeb3b; opacity:0.6;"></div>
-    <label for="toggle-127">Prediction – model 127</label>
-    <div id="toggle-127" class="toggle on" data-layer="pred-127-fill"></div>
-  </div>
-
-  <div class="layer-row">
-    <div class="swatch" style="background:#4caf50; opacity:0.6;"></div>
-    <label for="toggle-93">Prediction – model 93</label>
-    <div id="toggle-93" class="toggle on" data-layer="pred-93-fill"></div>
-  </div>
-</div>
-
-<div id="legend">
-  <h3>Legend</h3>
-  <div class="legend-item"><div class="legend-box" style="background:#ff0000; opacity:0.7;"></div> Ground truth</div>
-  <div class="legend-item"><div class="legend-box" style="background:#ff9800; opacity:0.7;"></div> Prediction (model 126)</div>
-  <div class="legend-item"><div class="legend-box" style="background:#ffeb3b; opacity:0.7;"></div> Prediction (model 127)</div>
-  <div class="legend-item"><div class="legend-box" style="background:#4caf50; opacity:0.7;"></div> Prediction (model 93)</div>
-</div>
-
-<div id="info">
-  <h3>About</h3>
-  <p>
-    U-Net segmentation of <em>Fallopia japonica</em> (Japanese knotweed) in
-    ortho-rectified 7.5 cm/px aerial imagery from the
-    <a href="https://www.maine.gov/geolib/" target="_blank">Maine GeoLibrary</a>, 2021.
-    Predictions from three model checkpoints are overlaid on the aerial image.
-    <br/><br/>
-    <a href="https://github.com/PhilipMathieu/unet-orthoimagery" target="_blank">Source on GitHub</a>
-    &nbsp;|&nbsp;
-    <a href="https://www.youtube.com/watch?v=7JHhMM3SsUo" target="_blank">Presentation</a>
-  </p>
-</div>
-
 <script>
+  // ── Collapsible panel helper ──────────────────────────────────────────────
+  function makePanel(titleText, bodyHTML) {
+    const el = document.createElement('div');
+    el.className = 'ctrl-panel maplibregl-ctrl';
+
+    const header = document.createElement('div');
+    header.className = 'ctrl-panel-header';
+    header.innerHTML = `<span class="ctrl-panel-title">${titleText}</span>
+                        <span class="ctrl-panel-chevron">▲</span>`;
+    header.addEventListener('click', () => el.classList.toggle('collapsed'));
+
+    const body = document.createElement('div');
+    body.className = 'ctrl-panel-body';
+    body.innerHTML = bodyHTML;
+
+    el.appendChild(header);
+    el.appendChild(body);
+    return el;
+  }
+
+  // ── Layers control ────────────────────────────────────────────────────────
+  const layerDefs = [
+    { toggleId: 'toggle-gt',  color: '#ff0000', label: 'Ground truth',      layer: 'ground-truth-fill' },
+    { toggleId: 'toggle-126', color: '#ff9800', label: 'Prediction – 126',   layer: 'pred-126-fill' },
+    { toggleId: 'toggle-127', color: '#ffeb3b', label: 'Prediction – 127',   layer: 'pred-127-fill' },
+    { toggleId: 'toggle-93',  color: '#4caf50', label: 'Prediction – 93',    layer: 'pred-93-fill' },
+  ];
+
+  const layersBodyHTML = `
+    <div class="opacity-row">
+      <label for="aerialOpacity">Aerial opacity</label>
+      <input type="range" id="aerialOpacity" min="0" max="1" step="0.05" value="1" />
+    </div>
+    ${layerDefs.map(({ toggleId, color, label, layer }) => `
+      <div class="layer-row">
+        <div class="swatch" style="background:${color}; opacity:0.75;"></div>
+        <label>${label}</label>
+        <div id="${toggleId}" class="toggle on" data-layer="${layer}"></div>
+      </div>`).join('')}`;
+
+  const LayersControl = {
+    onAdd(map) {
+      this._map = map;
+      this._el = makePanel('Layers', layersBodyHTML);
+      return this._el;
+    },
+    onRemove() { this._el.remove(); }
+  };
+
+  // ── Info control ──────────────────────────────────────────────────────────
+  const infoBodyHTML = `
+    <p class="info-body">
+      U-Net segmentation of <em>Fallopia japonica</em> (Japanese knotweed) in
+      ortho-rectified 7.5&nbsp;cm/px aerial imagery from the
+      <a href="https://www.maine.gov/geolib/" target="_blank">Maine GeoLibrary</a>, 2021.
+      Predictions from three model checkpoints are overlaid on the aerial image.
+      <br/><br/>
+      <a href="https://github.com/PhilipMathieu/unet-orthoimagery" target="_blank">Source on GitHub</a>
+      &nbsp;|&nbsp;
+      <a href="https://www.youtube.com/watch?v=7JHhMM3SsUo" target="_blank">Presentation</a>
+    </p>`;
+
+  const InfoControl = {
+    onAdd(map) {
+      this._map = map;
+      this._el = makePanel('About', infoBodyHTML);
+      return this._el;
+    },
+    onRemove() { this._el.remove(); }
+  };
+
+  // ── Map ───────────────────────────────────────────────────────────────────
   const map = new maplibregl.Map({
     container: 'map',
     style: {
@@ -241,8 +217,10 @@
 
   map.addControl(new maplibregl.NavigationControl(), 'top-left');
   map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+  map.addControl(LayersControl, 'top-right');
+  map.addControl(InfoControl, 'bottom-right');
 
-  // Image corners: top-left, top-right, bottom-right, bottom-left
+  // ── Data layers ───────────────────────────────────────────────────────────
   const aerialBounds = [
     [-70.2195925, 43.5635340],
     [-70.2181106, 43.5635340],
@@ -251,7 +229,6 @@
   ];
 
   map.on('load', () => {
-    // Aerial imagery overlay
     map.addSource('aerial', {
       type: 'image',
       url: 'aerial.jpg',
@@ -259,45 +236,35 @@
     });
     map.addLayer({ id: 'aerial-layer', type: 'raster', source: 'aerial', paint: { 'raster-opacity': 1 } });
 
-    // GeoJSON mask layers
-    const layers = [
+    const geojsonLayers = [
       { id: 'ground-truth', file: 'ground_truth.geojson', color: '#ff0000' },
       { id: 'pred-126',     file: 'prediction_126.geojson', color: '#ff9800' },
       { id: 'pred-127',     file: 'prediction_127.geojson', color: '#ffeb3b' },
       { id: 'pred-93',      file: 'prediction_93.geojson',  color: '#4caf50' }
     ];
 
-    layers.forEach(({ id, file, color }) => {
+    geojsonLayers.forEach(({ id, file, color }) => {
       map.addSource(id, { type: 'geojson', data: file });
-      map.addLayer({
-        id: `${id}-fill`,
-        type: 'fill',
-        source: id,
-        paint: { 'fill-color': color, 'fill-opacity': 0.45 }
-      });
-      map.addLayer({
-        id: `${id}-outline`,
-        type: 'line',
-        source: id,
-        paint: { 'line-color': color, 'line-width': 1, 'line-opacity': 0.8 }
-      });
+      map.addLayer({ id: `${id}-fill`,    type: 'fill', source: id,
+                     paint: { 'fill-color': color, 'fill-opacity': 0.45 } });
+      map.addLayer({ id: `${id}-outline`, type: 'line', source: id,
+                     paint: { 'line-color': color, 'line-width': 1, 'line-opacity': 0.8 } });
     });
-  });
 
-  // Aerial opacity slider
-  document.getElementById('aerialOpacity').addEventListener('input', e => {
-    map.setPaintProperty('aerial-layer', 'raster-opacity', parseFloat(e.target.value));
-  });
+    // Wire up controls (DOM is ready after addControl, data layers are now loaded)
+    document.getElementById('aerialOpacity').addEventListener('input', e => {
+      map.setPaintProperty('aerial-layer', 'raster-opacity', parseFloat(e.target.value));
+    });
 
-  // Layer toggles
-  document.querySelectorAll('.toggle').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const layerId = btn.dataset.layer;
-      const outlineId = layerId.replace('-fill', '-outline');
-      const isOn = btn.classList.toggle('on');
-      const vis = isOn ? 'visible' : 'none';
-      if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', vis);
-      if (map.getLayer(outlineId)) map.setLayoutProperty(outlineId, 'visibility', vis);
+    document.querySelectorAll('.toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const fillId    = btn.dataset.layer;
+        const outlineId = fillId.replace('-fill', '-outline');
+        const isOn = btn.classList.toggle('on');
+        const vis  = isOn ? 'visible' : 'none';
+        if (map.getLayer(fillId))    map.setLayoutProperty(fillId,    'visibility', vis);
+        if (map.getLayer(outlineId)) map.setLayoutProperty(outlineId, 'visibility', vis);
+      });
     });
   });
 </script>
